@@ -32,3 +32,30 @@ GH_Calcpad is a powerful Grasshopper plugin that seamlessly integrates Calcpad's
 1. Download the latest release from the [Releases](../../releases) page
 2. Close Rhino/Grasshopper if running
 3. Copy `GH_Calcpad.gha` to your Grasshopper Libraries folder:
+4. Restart Rhino
+5. The components will appear in the **Calcpad** tab in Grasshopper
+
+## 📋 Components
+
+### 🔧 Core Components
+
+| Component | Description | Inputs | Outputs |
+|-----------|-------------|---------|---------|
+| **Load CPD** | Loads .cpd files and extracts variables | FilePath, CaptureExplicit | Variables, Values, Units, SheetObj |
+| **Load CPDz** | Loads compiled .cpdz files | FilePath, Password | Variables, Values, Units, SheetObj |
+| **Play CPD** | Executes calculations with new values | Values, SheetObj | ResultEq, ResultVal, Elapsed, Success, UpdatedSheet |
+
+### 📤 Export Components
+
+| Component | Description | Function |
+|-----------|-------------|----------|
+| **Export Word** | Exports calculations to Word document | Generate professional reports |
+| **Export HTML** | Exports calculations to HTML format | Web-compatible documentation |
+
+### ℹ️ Utility Components
+
+| Component | Description | Purpose |
+|-----------|-------------|---------|
+| **Info** | Plugin and Calcpad version information | System diagnostics |
+
+## 💡 Usage Examples
