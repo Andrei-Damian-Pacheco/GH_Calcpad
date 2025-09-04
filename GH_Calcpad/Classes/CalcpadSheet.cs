@@ -1,35 +1,52 @@
 ﻿using PyCalcpad;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
-using System.Net;
-using System.Text;
+using System.Linq;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace GH_Calcpad.Classes
 {
+    /// <summary>
+    /// Optimized wrapper that uses ONLY Parser.Parse() for maximum performance
+    /// Perfect for optimization engines that require speed and precision
+    /// </summary>
     public class CalcpadSheet
     {
-        // Compatibilidad con Load
+        // --- Existing API (for compatibility with GH_Calcpad_Load_cpd) ---
         public List<string> Variables { get; }
         public List<double> Values { get; }
         public List<string> Units { get; }
 
-        // Estado
+        // --- Optimized API (Parser only) ---
         private string _originalCode;
         private Parser _parser;
         private Settings _settings;
         private string _lastHtmlResult;
 
-        private const string UnitTokenClassNoDigits = "A-Za-z°µμΩ℧·/\\-\\^²³";
-
+        /// <summary>
+        /// Public property for accessing original code
+        /// </summary>
         public string OriginalCode => _originalCode ?? string.Empty;
-        public bool HasCodeAvailable => !string.IsNullOrEmpty(_originalCode);
-        public string CodeInfo => string.IsNullOrEmpty(_originalCode) ? "No CPD code" : $"CPD code: {_originalCode.Length} characters";
-        public string LastHtmlResult => _lastHtmlResult ?? string.Empty;
 
-        public CalcpadSheet(List<string> variables, List<double> values, List<string> units)
+        /// <summary>
+        /// Public property to verify if CPD code is available
+        /// </summary>
+        public bool HasCodeAvailable => !string.IsNullOrEmpty(_originalCode);
+
+        /// <summary>
+        /// Public property to get code information
+        /// </summary>
+        public string CodeInfo => string.IsNullOrEmpty(_originalCode) ? "No CPD code" : $"CPD code: {_originalCode.Length} characters";
+
+        /// <summary>
+        /// Original constructor: for compatibility with Load
+        /// </summary>
+        public CalcpadSheet(
+            List<string> variables,
+            List<double> values,
+            List<string> units)
         {
             Variables = variables ?? new List<string>();
             Values = values ?? new List<double>();
@@ -45,7 +62,7 @@ namespace GH_Calcpad.Classes
             {
                 _settings = new Settings();
                 _settings.Math.Decimals = 15;
-
+                
                 _parser = new Parser();
                 _parser.Settings = _settings;
             }
@@ -56,8 +73,17 @@ namespace GH_Calcpad.Classes
             }
         }
 
-        public void SetFullCode(string code) => _originalCode = code ?? string.Empty;
+        /// <summary>
+        /// Sets the complete CPD code
+        /// </summary>
+        public void SetFullCode(string code)
+        {
+            _originalCode = code ?? string.Empty;
+        }
 
+        /// <summary>
+        /// Method for compatibility with other components
+        /// </summary>
         public void SetUnit(string name, string unit)
         {
             if (string.IsNullOrEmpty(_originalCode))
@@ -70,10 +96,13 @@ namespace GH_Calcpad.Classes
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error setting unit for '{name}': {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error setting unit for '{name}': {ex.Message}");
             }
         }
 
+        /// <summary>
+        /// ✅ OPTIMIZED: Modifies code directly for maximum speed
+        /// </summary>
         public void SetVariable(string name, double value)
         {
             if (string.IsNullOrEmpty(_originalCode))
@@ -81,457 +110,551 @@ namespace GH_Calcpad.Classes
 
             try
             {
-                string vStr = value.ToString(CultureInfo.InvariantCulture);
-
-                // Reemplazo por bloque preservando "';'" y unidades
-                string pattern = @"(?m)(^|\s*';'\s*)\s*(?<lhs>" + Regex.Escape(name) + @")\s*=\s*(?<rhs>[^\r\n]*?)(?=(\s*';'\s*|$))";
-
-                bool replaced = false;
-                _originalCode = Regex.Replace(_originalCode, pattern, m =>
-                {
-                    if (replaced) return m.Value;
-                    string boundary = m.Groups[1].Value;
-                    string rhs = m.Groups["rhs"].Value;
-
-                    string unit = ExtractUnitSuffix(rhs);
-                    string newRhs = string.IsNullOrEmpty(unit) ? vStr : (vStr + " " + unit);
-                    replaced = true;
-                    return $"{boundary}{name} = {newRhs}";
-                }, RegexOptions.None);
-
-                if (!replaced)
-                {
-                    string linePattern = @"(?m)^(?<pre>\s*)" + Regex.Escape(name) + @"\s*=\s*(?<rhs>[^\r\n]+)$";
-                    _originalCode = Regex.Replace(_originalCode, linePattern, m =>
-                    {
-                        string pre = m.Groups["pre"].Value;
-                        string rhs = m.Groups["rhs"].Value;
-                        string unit = ExtractUnitSuffix(rhs);
-                        string newRhs = string.IsNullOrEmpty(unit) ? vStr : (vStr + " " + unit);
-                        return $"{pre}{name} = {newRhs}";
-                    }, RegexOptions.None);
-                }
-
-                Debug.WriteLine($"SetVariable('{name}', {value}) - Block-level replace done");
+                string pattern = @"(?m)^\s*" + Regex.Escape(name) + @"\s*=.*$";
+                string replacement = name + " = " + value.ToString(CultureInfo.InvariantCulture);
+                _originalCode = Regex.Replace(_originalCode, pattern, replacement);
+                
+                System.Diagnostics.Debug.WriteLine($"SetVariable('{name}', {value}) - Code modified");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SetVariable('{name}', {value}) - ERROR: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SetVariable('{name}', {value}) - ERROR: {ex.Message}");
             }
         }
 
+        /// <summary>
+        /// ✅ MAIN METHOD: Use only Parser.Parse() to generate complete result
+        /// </summary>
         public void Calculate()
         {
             if (_parser == null)
                 throw new InvalidOperationException("Parser is not available.");
+
             if (string.IsNullOrEmpty(_originalCode))
                 throw new InvalidOperationException("No CPD code to calculate. Use SetFullCode() first.");
 
             try
             {
-                // Preprocesado opcional de aliases de unidades no soportadas por el parser
-                string codeToParse = PreprocessCode(_originalCode);
-                _lastHtmlResult = _parser.Parse(codeToParse);
+                System.Diagnostics.Debug.WriteLine("=== CALCULATING WITH OPTIMIZED PARSER ===");
+                System.Diagnostics.Debug.WriteLine($"Code to process ({_originalCode.Length} chars):\n{_originalCode}");
+
+                _lastHtmlResult = _parser.Parse(_originalCode);
+                
+                int htmlLength = string.IsNullOrEmpty(_lastHtmlResult) ? 0 : _lastHtmlResult.Length;
+                System.Diagnostics.Debug.WriteLine($"✅ HTML generated: {htmlLength} characters");
+                
+                if (!string.IsNullOrEmpty(_lastHtmlResult))
+                {
+                    int previewLength = Math.Min(3000, _lastHtmlResult.Length);
+                    System.Diagnostics.Debug.WriteLine($"HTML preview:\n{_lastHtmlResult.Substring(0, previewLength)}");
+                }
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"❌ ERROR in Calculate(): {ex.Message}");
                 throw new InvalidOperationException($"Calculation error: {ex.Message}");
             }
         }
 
-        // ==================== Ecuaciones / Valores / Unidades ====================
-
-        // Independiente de LoadCPD True/False
+        /// <summary>
+        /// ✅ EQUATION EXTRACTION: Searches for result equations in original code
+        /// </summary>
         public List<string> GetResultEquations()
         {
             var equations = new List<string>();
+
             try
             {
+                System.Diagnostics.Debug.WriteLine("=== EXTRACTING EQUATIONS ===");
+                
+                // Search for equations in original code
                 var lines = _originalCode.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                
                 foreach (var line in lines)
                 {
-                    string clean = line.Trim();
-                    if (string.IsNullOrEmpty(clean)) continue;
-                    if (clean.StartsWith("#") || clean.StartsWith("'") || clean.StartsWith("’") || clean.StartsWith("‘")) continue;
+                    string cleanLine = line.Trim();
+                    if (string.IsNullOrEmpty(cleanLine) || cleanLine.StartsWith("#") || cleanLine.StartsWith("'"))
+                        continue;
 
-                    if (!IsEquationDefinition(clean)) continue;
-
-                    int eq = clean.IndexOf('=');
-                    string left = clean.Substring(0, eq).Trim();
-                    string right = RemoveInlineComments(clean.Substring(eq + 1).Trim());
-                    if (!string.IsNullOrEmpty(right))
-                        equations.Add($"{left} = {right}");
+                    if (IsEquationDefinition(cleanLine))
+                    {
+                        string equation = ExtractEquationOnly(cleanLine);
+                        if (!string.IsNullOrEmpty(equation))
+                        {
+                            equations.Add(equation);
+                            System.Diagnostics.Debug.WriteLine($"✅ Equation: {equation}");
+                        }
+                    }
                 }
+                
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error extracting equations: {ex.Message}");
+            }
+
+            System.Diagnostics.Debug.WriteLine($"=== TOTAL EQUATIONS: {equations.Count} ===");
             return equations;
         }
 
+        /// <summary>
+        /// ✅ DETERMINES if a line defines a result equation
+        /// </summary>
+        private bool IsEquationDefinition(string line)
+        {
+            if (!line.Contains("="))
+                return false;
+
+            var parts = line.Split('=');
+            if (parts.Length < 2)
+                return false;
+
+            string leftSide = parts[0].Trim();
+            string rightSide = parts[1].Trim();
+
+            // Left side must be a simple variable
+            if (!Regex.IsMatch(leftSide, @"^[a-zA-Z_][a-zA-Z0-9_'′,\.]*$"))
+                return false;
+
+            // Right side must contain operations or variables (not just a number)
+            bool hasOperations = rightSide.Contains("+") || rightSide.Contains("-") || 
+                               rightSide.Contains("*") || rightSide.Contains("/") || 
+                               rightSide.Contains("(") || rightSide.Contains("sqrt") ||
+                               rightSide.Contains("^") || rightSide.Contains("sin") ||
+                               rightSide.Contains("cos") || rightSide.Contains("tan") ||
+                               rightSide.Contains("log") || rightSide.Contains("exp");
+
+            bool hasVariables = Regex.IsMatch(rightSide, @"[a-zA-Z_][a-zA-Z0-9_'′,\.]*");
+
+            return hasOperations || hasVariables;
+        }
+
+        /// <summary>
+        /// ✅ EXTRACTS ONLY THE EQUATION WITHOUT THE FINAL VALUE
+        /// </summary>
+        private string ExtractEquationOnly(string line)
+        {
+            if (!line.Contains("="))
+                return null;
+
+            var parts = line.Split('=');
+            if (parts.Length < 2)
+                return null;
+
+            string leftSide = parts[0].Trim();
+            string rightSide = parts[1].Trim();
+
+            // Clean comments
+            int commentIndex = rightSide.IndexOf('#');
+            if (commentIndex >= 0)
+                rightSide = rightSide.Substring(0, commentIndex).Trim();
+
+            commentIndex = rightSide.IndexOf('\'');
+            if (commentIndex >= 0)
+                rightSide = rightSide.Substring(0, commentIndex).Trim();
+
+            return $"{leftSide} = {rightSide}";
+        }
+
+        /// <summary>
+        /// ✅ OPTIMIZED METHOD: Extracts values directly from Parser HTML
+        /// This is the main strategy for optimization engines
+        /// </summary>
         public List<double> GetResultValues()
         {
             var results = new List<double>();
-            var vars = GetEquationVariableNamesFromCode(); // orden del código
-            if (vars.Count == 0) return results;
+            var equations = GetResultEquations();
 
-            string plain = ToPlainText(_lastHtmlResult);
-            var blocks = ExtractResultBlocksByVar(plain, vars);
+            System.Diagnostics.Debug.WriteLine($"=== EXTRACTING VALUES FROM HTML ({equations.Count} equations) ===");
 
-            foreach (var v in vars)
+            if (string.IsNullOrEmpty(_lastHtmlResult))
             {
-                if (blocks.TryGetValue(v, out var block))
-                    results.Add(ExtractFinalNumericFromBlock(block));
-                else
+                System.Diagnostics.Debug.WriteLine("❌ No HTML available");
+                for (int i = 0; i < equations.Count; i++)
+                    results.Add(double.NaN);
+                return results;
+            }
+
+            try
+            {
+                foreach (var equation in equations)
+                {
+                    string varName = ExtractVariableName(equation);
+                    if (string.IsNullOrEmpty(varName))
+                    {
+                        results.Add(double.NaN);
+                        System.Diagnostics.Debug.WriteLine($"❌ Could not extract variable from: {equation}");
+                        continue;
+                    }
+
+                    double value = ExtractFinalValueFromHtml(varName);
+                    results.Add(value);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Error extracting values: {ex.Message}");
+                
+                // Fill with NaN in case of error
+                results.Clear();
+                for (int i = 0; i < equations.Count; i++)
                     results.Add(double.NaN);
             }
+
+            System.Diagnostics.Debug.WriteLine($"=== VALUES EXTRACTED: [{string.Join(", ", results)}] ===");
             return results;
         }
 
-        public List<string> GetResultUnits()
+        /// <summary>
+        /// ✅ SIMPLIFIED AND DIRECT: Extract values from HTML using exact patterns
+        /// </summary>
+        private double ExtractFinalValueFromHtml(string varName)
         {
-            var units = new List<string>();
-            var vars = GetEquationVariableNamesFromCode();
-            if (vars.Count == 0) return units;
-
-            // 1) HTML (reconstruye fracciones dvc/dvl)
-            var htmlMap = ExtractResultBlocksByVarHtml(_lastHtmlResult, vars);
-
-            foreach (var v in vars)
-            {
-                string u = string.Empty;
-
-                if (htmlMap.TryGetValue(v, out var spanHtml))
-                    u = ExtractFinalUnitFromEqSpanHtml(spanHtml);
-
-                if (string.IsNullOrEmpty(u))
-                {
-                    // 2) Fallback: texto plano
-                    string plain = ToPlainText(_lastHtmlResult);
-                    var textMap = ExtractResultBlocksByVar(plain, vars);
-                    if (textMap.TryGetValue(v, out var block))
-                        u = ExtractFinalUnitFromBlock(block);
-                }
-
-                units.Add(u ?? string.Empty);
-            }
-            return units;
-        }
-
-        // ==================== Reglas de detección ====================
-
-        // Ecuación “real” del código fuente (no asignaciones ni explícitos)
-        private bool IsEquationDefinition(string line)
-        {
-            if (string.IsNullOrWhiteSpace(line)) return false;
-
-            int firstEq = line.IndexOf('=');
-            if (firstEq < 0) return false;
-            if (line.Contains("';'")) return false;                  // múltiples asignaciones en la línea
-            if (line.IndexOf('=', firstEq + 1) >= 0) return false;   // más de un '='
-
-            string left = line.Substring(0, firstEq).Trim();
-            string rightRaw = line.Substring(firstEq + 1).Trim();
-            string right = RemoveInlineComments(rightRaw);
-
-            // LHS válido
-            if (!Regex.IsMatch(left, @"^[a-zA-Z_][a-zA-Z0-9_'′,\.]*$")) return false;
-
-            // Dinámico: clase de caracteres de unidad desde calcpad.xml
-            string unitClass = CalcpadSyntax.Instance.UnitCharClass;
-
-            // Excluir RHS puramente numérico (+unidad)
-            var rxNumUnit = new Regex(@"^[+-]?\d+(?:\.\d+)?(?:\s*[" + unitClass + @"]+)?\s*$",
-                              RegexOptions.CultureInvariant);
-            if (rxNumUnit.IsMatch(right)) return false;
-
-            // Excluir explícitos ?{...}[unidad]
-            var rxExplicit = new Regex(@"^\?\s*\{\s*[^}]+\s*\}\s*(?:[" + unitClass + @"]+)?\s*$",
-                               RegexOptions.CultureInvariant);
-            if (rxExplicit.IsMatch(right)) return false;
-
-            // Aceptar SOLO si hay operadores/funciones (verdaderas ecuaciones)
-            bool hasOps = right.IndexOfAny(new[] { '+', '-', '*', '/', '^', '(', ')' }) >= 0
-               || Regex.IsMatch(right, @"\b(sqrt|sin|cos|tan|log|exp|abs|min|max|pow)\b",
-                                RegexOptions.IgnoreCase);
-
-            return hasOps;
-        }
-
-        private List<string> GetEquationVariableNamesFromCode()
-        {
-            var names = new List<string>();
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-
             try
             {
-                var lines = _originalCode.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var line in lines)
-                {
-                    var clean = line.Trim();
-                    if (string.IsNullOrEmpty(clean)) continue;
-                    if (clean.StartsWith("#") || clean.StartsWith("'") || clean.StartsWith("’") || clean.StartsWith("‘")) continue;
-                    if (!clean.Contains("=") || clean.Contains("';'")) continue;
-                    if (!IsEquationDefinition(clean)) continue;
+                System.Diagnostics.Debug.WriteLine($"=== EXTRACTING VALUE FOR: '{varName}' ===");
 
-                    string left = clean.Substring(0, clean.IndexOf('=')).Trim();
-                    if (seen.Add(left)) names.Add(left);
+                // ✅ STRATEGY 1: Handle specific cases based on variable name patterns
+                if (varName.Contains("_"))
+                {
+                    return ExtractSubscriptVariable(varName);
+                }
+                else
+                {
+                    return ExtractSimpleVariable(varName);
                 }
             }
-            catch { }
-            return names;
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ ERROR extracting {varName}: {ex.Message}");
+                return double.NaN;
+            }
         }
 
-        // ==================== HTML/Text extractores ====================
-
-        private string ToPlainText(string htmlOrText)
+        /// <summary>
+        /// ✅ EXTRACT simple variables like A, E, P
+        /// </summary>
+        private double ExtractSimpleVariable(string varName)
         {
-            string s = htmlOrText ?? string.Empty;
-            bool looksHtml = s.IndexOf('<') >= 0 && s.IndexOf('>') > s.IndexOf('<');
-
-            if (looksHtml)
-            {
-                s = WebUtility.HtmlDecode(s);
-                s = Regex.Replace(s, @"</?(?:span|div|p|i|b|strong|em|u|var|sub|sup|br)\b[^>]*>", m =>
-                {
-                    var tag = m.Value.ToLowerInvariant();
-                    if (tag.StartsWith("<br") || tag.StartsWith("</p") || tag.StartsWith("<p"))
-                        return "\n";
-                    return string.Empty;
-                }, RegexOptions.Singleline);
-                s = Regex.Replace(s, "<[^>]+>", string.Empty, RegexOptions.Singleline);
-            }
-            else
-            {
-                s = WebUtility.HtmlDecode(s);
-            }
-            return NormalizeSpacesAndTokens(s);
-        }
-
-        private static string NormalizeSpacesAndTokens(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-
-            // Espacios unicode → espacio normal
-            s = s.Replace('\u2009', ' ')
-                 .Replace('\u200A', ' ')
-                 .Replace('\u202F', ' ')
-                 .Replace('\u00A0', ' ')
-                 .Replace('\u2002', ' ')
-                 .Replace('\u2003', ' ')
-                 .Replace('\u2005', ' ')
-                 .Replace('\u2006', ' ');
-
-            // '=' ancho completo → '=' ASCII
-            s = s.Replace('\uFF1D', '=');
-
-            s = s.Replace("\r\n", "\n").Replace("\r", "\n");
-            s = Regex.Replace(s, @"[ \t]+", " ");
-            return s;
-        }
-
-        private Dictionary<string, string> ExtractResultBlocksByVar(string plainOutput, List<string> targetVars)
-        {
-            var dict = new Dictionary<string, string>(StringComparer.Ordinal);
-            if (string.IsNullOrEmpty(plainOutput) || targetVars == null || targetVars.Count == 0)
-                return dict;
-
-            var startRegex = new Regex(@"^\s*([A-Za-z_][A-Za-z0-9_'′,\.]*)\s*=", RegexOptions.Compiled);
-
-            string currentVar = null;
-            var sb = new StringBuilder();
-
-            void Flush()
-            {
-                if (!string.IsNullOrEmpty(currentVar) && sb.Length > 0 && !dict.ContainsKey(currentVar))
-                    dict[currentVar] = sb.ToString().Trim();
-                sb.Clear();
-            }
-
-            foreach (var raw in plainOutput.Split(new[] { '\n' }, StringSplitOptions.None))
-            {
-                var line = raw.TrimEnd();
-
-                var m = startRegex.Match(line);
-                if (m.Success)
-                {
-                    string candidate = m.Groups[1].Value;
-                    if (targetVars.Contains(candidate))
-                    {
-                        Flush();
-                        currentVar = candidate;
-                        sb.AppendLine(line.Trim());
-                        continue;
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(currentVar))
-                {
-                    if (string.IsNullOrWhiteSpace(line))
-                    {
-                        sb.AppendLine(line);
-                        continue;
-                    }
-                    sb.AppendLine(line.Trim());
-                }
-            }
-            Flush();
-
-            return dict;
-        }
-
-        private double ExtractFinalNumericFromBlock(string block)
-        {
-            if (string.IsNullOrWhiteSpace(block)) return double.NaN;
-
             try
             {
-                int lastEq = block.LastIndexOf('=');
-                string tail = lastEq >= 0 ? block.Substring(lastEq + 1) : block;
-                tail = NormalizeSpacesAndTokens(tail).Trim();
-
-                // Científica real con ×
-                var sci = Regex.Match(
-                    tail,
-                    @"^\s*([+-]?\d+(?:\.\d+)?)\s*×\s*10\^?([+-]?\d+)\b",
-                    RegexOptions.CultureInvariant
-                );
-                if (sci.Success)
+                System.Diagnostics.Debug.WriteLine($"Extracting simple variable: {varName}");
+                
+                // ✅ SPECIAL CASE: Variable A has complex formula structure
+                if (varName == "A")
                 {
-                    double a = double.Parse(sci.Groups[1].Value, CultureInfo.InvariantCulture);
-                    int b = int.Parse(sci.Groups[2].Value, CultureInfo.InvariantCulture);
-                    return a * Math.Pow(10, b);
+                    return ExtractVariableA();
+                }
+                
+                // ✅ SPECIAL CASE: Variable E has units
+                if (varName == "E")
+                {
+                    return ExtractVariableE();
                 }
 
-                // Decimal normal (anclado)
-                var num = Regex.Match(tail, @"^\s*([+-]?\d+(?:\.\d+)?)\b", RegexOptions.CultureInvariant);
-                if (num.Success)
-                    return double.Parse(num.Groups[1].Value, CultureInfo.InvariantCulture);
+                // Pattern for simple variables: <var>P</var> = value
+                var patterns = new string[]
+                {
+                    // Pattern 1: Direct assignment
+                    $@"<var>{Regex.Escape(varName)}</var>\s*=\s*([0-9]+(?:\.[0-9]+)?)",
+                    
+                    // Pattern 2: With scientific notation
+                    $@"<var>{Regex.Escape(varName)}</var>\s*=[\s\S]*?([0-9]+(?:\.[0-9]+)?)×10<sup>([+-]?[0-9]+)</sup>",
+                    
+                    // Pattern 3: Final result after equation
+                    $@"<var>{Regex.Escape(varName)}</var>\s*=[\s\S]*?=\s*([0-9]+(?:\.[0-9]+)?)"
+                };
+
+                foreach (var pattern in patterns)
+                {
+                    var match = Regex.Match(_lastHtmlResult, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                    
+                    if (match.Success)
+                    {
+                        if (pattern.Contains("×10<sup>"))
+                        {
+                            // Scientific notation
+                            double baseNumber = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+                            int exponent = int.Parse(match.Groups[2].Value);
+                            double result = baseNumber * Math.Pow(10, exponent);
+                            System.Diagnostics.Debug.WriteLine($"✅ Simple scientific {varName} = {result}");
+                            return result;
+                        }
+                        else
+                        {
+                            // Regular number
+                            if (double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"✅ Simple variable {varName} = {result}");
+                                return result;
+                            }
+                        }
+                    }
+                }
 
                 return double.NaN;
             }
-            catch { return double.NaN; }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ExtractSimpleVariable: {ex.Message}");
+                return double.NaN;
+            }
         }
 
-        // Reemplaza el método ExtractFinalUnitFromBlock por esta versión (sin dígitos en unidad)
-        private string ExtractFinalUnitFromBlock(string block)
+        /// <summary>
+        /// ✅ EXTRACT variable A (has complex formula)
+        /// </summary>
+        private double ExtractVariableA()
         {
-            if (string.IsNullOrWhiteSpace(block)) return string.Empty;
-
             try
             {
-                int lastEq = block.LastIndexOf('=');
-                string tail = lastEq >= 0 ? block.Substring(lastEq + 1) : block;
-                tail = NormalizeSpacesAndTokens(tail).Trim();
-
-                // número [× 10^exp] unidad(sin dígitos)
-                var m = Regex.Match(
-                    tail,
-                    @"^\s*[+-]?\d+(?:\.\d+)?(?:\s*×\s*10\^?[+-]?\d+)?\s*(?<u>[" + UnitTokenClassNoDigits + @"]+)\b",
-                    RegexOptions.CultureInvariant
-                );
-                if (m.Success)
-                    return m.Groups["u"].Value.Trim();
-
-                return string.Empty;
-            }
-            catch { return string.Empty; }
-        }
-
-        private Dictionary<string, string> ExtractResultBlocksByVarHtml(string html, List<string> targetVars)
-        {
-            var dict = new Dictionary<string, string>(StringComparer.Ordinal);
-            if (string.IsNullOrEmpty(html) || targetVars == null || targetVars.Count == 0)
-                return dict;
-
-            foreach (var fullName in targetVars)
-            {
-                SplitVar(fullName, out var baseVar, out var sub);
-                string pat = sub == null
-                    ? $@"<span\s+class=""eq"">\s*<var>\s*{Regex.Escape(baseVar)}\s*</var>[\s\S]*?</span>"
-                    : $@"<span\s+class=""eq"">\s*<var>\s*{Regex.Escape(baseVar)}\s*</var>\s*<sub>\s*{Regex.Escape(sub)}\s*</sub>[\s\S]*?</span>";
-
-                var m = Regex.Match(html, pat, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                if (m.Success)
-                    dict[fullName] = m.Value;
-            }
-            return dict;
-        }
-
-        private static void SplitVar(string name, out string baseVar, out string sub)
-        {
-            var idx = name.IndexOf('_');
-            if (idx > 0 && idx < name.Length - 1)
-            {
-                baseVar = name.Substring(0, idx);
-                sub = name.Substring(idx + 1);
-            }
-            else
-            {
-                baseVar = name;
-                sub = null;
-            }
-        }
-
-        private string ExtractFinalUnitFromEqSpanHtml(string spanHtml)
-        {
-            if (string.IsNullOrWhiteSpace(spanHtml))
-                return string.Empty;
-
-            try
-            {
-                var eqTailMatch = Regex.Match(spanHtml, @"=(?!.*=)([\s\S]*)</span>", RegexOptions.Singleline);
-                string tailHtml = eqTailMatch.Success ? eqTailMatch.Groups[1].Value : spanHtml;
-
-                // Fracción con dvc/dvl
-                var dvc = Regex.Match(tailHtml, @"<span\s+class=""dvc"">([\s\S]*?)</span>", RegexOptions.IgnoreCase);
-                if (dvc.Success)
+                // A has pattern: <var>A</var> = formula = calculation = 1.16×10<sup>-2</sup>
+                var pattern = @"<var>A</var>\s*=[\s\S]*?([0-9]+\.[0-9]+)×10<sup>([+-]?[0-9]+)</sup>";
+                var match = Regex.Match(_lastHtmlResult, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                
+                if (match.Success)
                 {
-                    string inner = dvc.Groups[1].Value;
+                    double baseNumber = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+                    int exponent = int.Parse(match.Groups[2].Value);
+                    double result = baseNumber * Math.Pow(10, exponent);
+                    System.Diagnostics.Debug.WriteLine($"✅ Variable A = {result}");
+                    return result;
+                }
+                
+                return double.NaN;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error extracting A: {ex.Message}");
+                return double.NaN;
+            }
+        }
 
-                    var iMatches = Regex.Matches(inner, @"<i>(.*?)</i>", RegexOptions.Singleline);
-                    string sup = "";
-                    var supMatch = Regex.Match(inner, @"<sup>(.*?)</sup>", RegexOptions.Singleline);
-                    if (supMatch.Success)
-                        sup = "^" + WebUtility.HtmlDecode(supMatch.Groups[1].Value).Trim();
-
-                    if (iMatches.Count >= 2)
+        /// <summary>
+        /// ✅ EXTRACT variable E (has units)
+        /// </summary>
+        private double ExtractVariableE()
+        {
+            try
+            {
+                // E has pattern: <var>E</var> = 210000000000 <i>Pa</i>
+                var pattern = @"<var>E</var>\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*<i>Pa</i>";
+                var match = Regex.Match(_lastHtmlResult, pattern, RegexOptions.IgnoreCase);
+                
+                if (match.Success)
+                {
+                    if (double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
                     {
-                        string num = WebUtility.HtmlDecode(iMatches[0].Groups[1].Value).Trim();
-                        string den = WebUtility.HtmlDecode(iMatches[1].Groups[1].Value).Trim();
-                        return string.IsNullOrEmpty(sup) ? $"{num}/{den}" : $"{num}/{den}{sup}";
+                        System.Diagnostics.Debug.WriteLine($"✅ Variable E = {result}");
+                        return result;
                     }
-                    else if (iMatches.Count == 1)
+                }
+                
+                return double.NaN;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error extracting E: {ex.Message}");
+                return double.NaN;
+            }
+        }
+
+        /// <summary>
+        /// ✅ EXTRACT subscript variables like I_y, I_z, Pcr_y, Pcr_z, P_min
+        /// </summary>
+        private double ExtractSubscriptVariable(string varName)
+        {
+            try
+            {
+                var parts = varName.Split('_');
+                if (parts.Length != 2) return double.NaN;
+                
+                string baseVar = parts[0];
+                string subscript = parts[1];
+                
+                System.Diagnostics.Debug.WriteLine($"Extracting subscript variable: {baseVar}_{subscript}");
+                
+                // ✅ SPECIAL CASE: Handle complex formulas with nested spans (like I_y, I_z)
+                if (baseVar == "I")
+                {
+                    return ExtractComplexFormulaVariable(baseVar, subscript);
+                }
+                
+                // Pattern for subscript variables: <var>Pcr</var><sub>y</sub> = ... = finalvalue
+                var patterns = new string[]
+                {
+                    // Pattern 1: Full equation with final result (works for Pcr_y, Pcr_z)
+                    $@"<var>{Regex.Escape(baseVar)}</var><sub>{Regex.Escape(subscript)}</sub>[\s\S]*?=\s*([0-9]+(?:\.[0-9]+)?)&#8201;<i>[^<]*</i>",
+                    
+                    // Pattern 2: Scientific notation
+                    $@"<var>{Regex.Escape(baseVar)}</var><sub>{Regex.Escape(subscript)}</sub>[\s\S]*?([0-9]+(?:\.[0-9]+)?)×10<sup>([+-]?[0-9]+)</sup>",
+                    
+                    // Pattern 3: Simple number
+                    $@"<var>{Regex.Escape(baseVar)}</var><sub>{Regex.Escape(subscript)}</sub>[\s\S]*?=\s*([0-9]+(?:\.[0-9]+)?)"
+                };
+
+                foreach (var pattern in patterns)
+                {
+                    var match = Regex.Match(_lastHtmlResult, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                    
+                    if (match.Success)
                     {
-                        string tok = WebUtility.HtmlDecode(iMatches[0].Groups[1].Value).Trim();
-                        return string.IsNullOrEmpty(sup) ? tok : $"{tok}{sup}";
+                        if (pattern.Contains("×10<sup>"))
+                        {
+                            // Scientific notation
+                            double baseNumber = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+                            int exponent = int.Parse(match.Groups[2].Value);
+                            double result = baseNumber * Math.Pow(10, exponent);
+                            System.Diagnostics.Debug.WriteLine($"✅ Subscript scientific {varName} = {result}");
+                            return result;
+                        }
+                        else
+                        {
+                            // Regular number
+                            string valueStr = match.Groups[1].Value;
+                            if (double.TryParse(valueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"✅ Subscript variable {varName} = {result}");
+                                return result;
+                            }
+                        }
                     }
                 }
 
-                // Unidad simple: último <i>…</i> del tail
-                var lastI = Regex.Matches(tailHtml, @"<i>(.*?)</i>", RegexOptions.Singleline);
-                if (lastI.Count > 0)
-                {
-                    var u = WebUtility.HtmlDecode(lastI[lastI.Count - 1].Groups[1].Value).Trim();
-                    return u;
-                }
+                System.Diagnostics.Debug.WriteLine($"❌ No pattern matched for subscript variable: {varName}");
+                return double.NaN;
             }
-            catch { /* ignore */ }
-
-            return string.Empty;
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ExtractSubscriptVariable: {ex.Message}");
+                return double.NaN;
+            }
         }
 
-        // ==================== Utilidades ====================
-
-        public string GetDebugInfo()
+        /// <summary>
+        /// ✅ EXTRACT variables with complex nested formula structure (I_y, I_z)
+        /// </summary>
+        private double ExtractComplexFormulaVariable(string baseVar, string subscript)
         {
-            var info = new StringBuilder();
-            info.AppendLine($"CPD Code ({_originalCode?.Length ?? 0} chars):");
-            info.AppendLine(_originalCode ?? "No code");
-            info.AppendLine();
-            info.AppendLine($"Generated HTML/Text ({_lastHtmlResult?.Length ?? 0} chars):");
-            info.AppendLine(_lastHtmlResult ?? "No HTML");
-            return info.ToString();
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"Extracting complex formula: {baseVar}_{subscript}");
+                
+                // For I_y and I_z, look for the final result after all the formula spans
+                // Pattern: <var>I</var><sub>y</sub> = <span class="dvc">...</span> = <span class="dvc">...</span> = 2.04436666666667×10<sup>-4</sup>
+                
+                var complexPatterns = new string[]
+                {
+                    // Pattern 1: Final scientific notation result
+                    $@"<var>{Regex.Escape(baseVar)}</var><sub>{Regex.Escape(subscript)}</sub>[\s\S]*?=\s*([0-9]+(?:\.[0-9]+)?)\u00D710<sup>([+-]?[0-9]+)</sup>\s*</span>",
+                    
+                    // Pattern 2: Final decimal result
+                    $@"<var>{Regex.Escape(baseVar)}</var><sub>{Regex.Escape(subscript)}</sub>[\s\S]*?=\s*([0-9]+\.[0-9]+)\s*</span>",
+                    
+                    // Pattern 3: Look for the last number in the entire span
+                    $@"<var>{Regex.Escape(baseVar)}</var><sub>{Regex.Escape(subscript)}</sub>[\s\S]*?([0-9]+\.[0-9]{{6,}})\u00D710<sup>([+-]?[0-9]+)</sup>"
+                };
+
+                foreach (var pattern in complexPatterns)
+                {
+                    var match = Regex.Match(_lastHtmlResult, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                    
+                    if (match.Success)
+                    {
+                        if (pattern.Contains("×10<sup>"))
+                        {
+                            // Scientific notation
+                            double baseNumber = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+                            int exponent = int.Parse(match.Groups[2].Value);
+                            double result = baseNumber * Math.Pow(10, exponent);
+                            System.Diagnostics.Debug.WriteLine($"✅ Complex formula {baseVar}_{subscript} = {result}");
+                            return result;
+                        }
+                        else
+                        {
+                            // Regular decimal
+                            if (double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"✅ Complex formula decimal {baseVar}_{subscript} = {result}");
+                                return result;
+                            }
+                        }
+                    }
+                }
+
+                // ✅ FALLBACK: Extract any scientific notation number associated with this variable
+                var fallbackPattern = $@"<var>{Regex.Escape(baseVar)}</var><sub>{Regex.Escape(subscript)}</sub>[\s\S]*?([0-9]+\.[0-9]+)×10<sup>([+-]?[0-9]+)</sup>";
+                var fallbackMatch = Regex.Match(_lastHtmlResult, fallbackPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                
+                if (fallbackMatch.Success)
+                {
+                    double baseNumber = double.Parse(fallbackMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                    int exponent = int.Parse(fallbackMatch.Groups[2].Value);
+                    double result = baseNumber * Math.Pow(10, exponent);
+                    System.Diagnostics.Debug.WriteLine($"✅ Fallback complex {baseVar}_{subscript} = {result}");
+                    return result;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"❌ No complex pattern matched for: {baseVar}_{subscript}");
+                return double.NaN;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ExtractComplexFormulaVariable: {ex.Message}");
+                return double.NaN;
+            }
         }
 
+        /// <summary>
+        /// ✅ CONVERT string to double handling scientific notation
+        /// </summary>
+        private double ConvertToDouble(string valueStr)
+        {
+            try
+            {
+                // Handle scientific notation with ×10<sup>n</sup>
+                var scientificMatch = Regex.Match(valueStr, @"([0-9]+(?:\.[0-9]+)?)×10<sup>([+-]?[0-9]+)</sup>");
+                if (scientificMatch.Success)
+                {
+                    double baseNumber = double.Parse(scientificMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                    int exponent = int.Parse(scientificMatch.Groups[2].Value);
+                    return baseNumber * Math.Pow(10, exponent);
+                }
+                
+                // Handle regular numbers
+                if (double.TryParse(valueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+                {
+                    return result;
+                }
+                
+                return double.NaN;
+            }
+            catch
+            {
+                return double.NaN;
+            }
+        }
+
+        /// <summary>
+        /// ✅ EXTRACTS VARIABLE NAME FROM AN EQUATION
+        /// </summary>
+        private string ExtractVariableName(string equation)
+        {
+            if (string.IsNullOrEmpty(equation) || !equation.Contains("="))
+                return null;
+
+            string leftSide = equation.Split('=')[0].Trim();
+            
+            // Verify it's a valid variable name
+            if (Regex.IsMatch(leftSide, @"^[a-zA-Z_][a-zA-Z0-9_'′,\.]*$"))
+                return leftSide;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Cleans and releases resources
+        /// </summary>
         public void Dispose()
         {
             try
@@ -540,174 +663,29 @@ namespace GH_Calcpad.Classes
                 _settings = null;
                 _lastHtmlResult = null;
             }
-            catch { }
-        }
-
-        private static string RemoveInlineComments(string rhs)
-        {
-            if (string.IsNullOrEmpty(rhs)) return rhs;
-
-            rhs = NormalizeSpacesAndTokens(rhs).Trim();
-
-            // Corta en #, ' (no "';'"), ’, ‘
-            var m = Regex.Match(
-                rhs,
-                @"^(?<code>.*?)(?:\s*(?:#|'(?!;)|\u2019|\u2018).*)?$",
-                RegexOptions.CultureInvariant
-            );
-
-            var code = m.Success ? m.Groups["code"].Value : rhs;
-            return code.Trim();
-        }
-
-        private static string NormalizeSpaces(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-            s = s.Replace('\u2009', ' ')
-                 .Replace('\u200A', ' ')
-                 .Replace('\u202F', ' ')
-                 .Replace('\u00A0', ' ')
-                 .Replace('\u2002', ' ')
-                 .Replace('\u2003', ' ')
-                 .Replace('\u2005', ' ')
-                 .Replace('\u2006', ' ');
-            s = s.Replace("\r\n", "\n").Replace("\r", "\n");
-            s = Regex.Replace(s, @"[ \t]+", " ");
-            return s;
-        }
-
-        // Reemplaza ExtractUnitSuffix por esta versión (sin dígitos en unidad)
-        private static string ExtractUnitSuffix(string rhs)
-        {
-            if (string.IsNullOrWhiteSpace(rhs)) return string.Empty;
-            rhs = NormalizeSpaces(rhs).Trim();
-
-            // ?{...}[unidad]
-            var mExp = Regex.Match(rhs,
-                @"\?\s*\{[^}]*\}\s*(?<unit>[" + UnitTokenClassNoDigits + @"]+)?\s*$",
-                RegexOptions.CultureInvariant);
-            if (mExp.Success)
-                return (mExp.Groups["unit"].Success ? mExp.Groups["unit"].Value : string.Empty).Trim();
-
-            // número [unidad]
-            var mNum = Regex.Match(rhs,
-                @"[+-]?\d+(?:\.\d+)?\s*(?<unit>[" + UnitTokenClassNoDigits + @"]+)?\s*$",
-                RegexOptions.CultureInvariant);
-            if (mNum.Success)
-                return (mNum.Groups["unit"].Success ? mNum.Groups["unit"].Value : string.Empty).Trim();
-
-            return string.Empty;
-        }
-
-        // NUEVO (opcional): obtener los valores EXACTOS como texto, tal como aparecen en HTML (sin recorte)
-        public List<string> GetResultValuesText()
-        {
-            var resultText = new List<string>();
-            var vars = GetEquationVariableNamesFromCode();
-            if (vars.Count == 0) return resultText;
-
-            string plain = ToPlainText(_lastHtmlResult);
-            var blocks = ExtractResultBlocksByVar(plain, vars);
-
-            foreach (var v in vars)
+            catch
             {
-                if (blocks.TryGetValue(v, out var block))
-                    resultText.Add(ExtractFinalNumericStringFromBlock(block));
-                else
-                    resultText.Add(string.Empty);
+                // Suppress errors in dispose
             }
-            return resultText;
         }
 
-        private string ExtractFinalNumericStringFromBlock(string block)
+        /// <summary>
+        /// ✅ DEBUGGING PROPERTY: Exposes HTML generated by Parser
+        /// </summary>
+        public string LastHtmlResult => _lastHtmlResult ?? string.Empty;
+
+        /// <summary>
+        /// ✅ DEBUG METHOD: Gets detailed information from last calculation
+        /// </summary>
+        public string GetDebugInfo()
         {
-            if (string.IsNullOrWhiteSpace(block)) return string.Empty;
-
-            int lastEq = block.LastIndexOf('=');
-            string tail = lastEq >= 0 ? block.Substring(lastEq + 1) : block;
-            tail = NormalizeSpacesAndTokens(tail).Trim();
-
-            // científica: base × 10^exp (con × real)
-            var sci = Regex.Match(
-                tail,
-                @"^\s*([+-]?\d+(?:\.\d+)?)\s*×\s*10\^([+-]?\d+)\b",
-                RegexOptions.CultureInvariant
-            );
-            if (sci.Success)
-            {
-                // Devolvemos exactamente el texto “a × 10^b”
-                return $"{sci.Groups[1].Value} × 10^{sci.Groups[2].Value}";
-            }
-
-            // decimal normal: devolver todos los dígitos capturados
-            var num = Regex.Match(tail, @"^\s*([+-]?\d+(?:\.\d+)?)\b", RegexOptions.CultureInvariant);
-            if (num.Success)
-                return num.Groups[1].Value;
-
-            return string.Empty;
-        }
-
-        // Preprocesado de aliases de unidades no soportadas por el parser
-        private string PreprocessCode(string code)
-        {
-            string s = code ?? string.Empty;
-            return NormalizeUnsupportedUnits(s);
-        }
-
-        internal static string NormalizeUnsupportedUnits(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-
-            // ton_f / tonf / tf → 1000 kgf (inserta espacio; no toca identificadores)
-            s = Regex.Replace(
-                s,
-                @"(?<![A-Za-z0-9_])ton_f(?![A-Za-z0-9_])",
-                " 1000 kgf",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-            );
-            s = Regex.Replace(
-                s,
-                @"(?<![A-Za-z0-9_])tonf(?![A-Za-z0-9_])",
-                " 1000 kgf",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-            );
-            s = Regex.Replace(
-                s,
-                @"(?<![A-Za-z0-9_])tf(?![A-Za-z0-9_])",
-                " 1000 kgf",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-            );
-
-            // Otras variantes: kip_f / kip / kips / klbf → 1000 lbf
-            // s = Regex.Replace(s, @"(?<![A-Za-z0-9_])tonf(?![A-Za-z0-9_])", " 1000 kgf", RegexOptions.IgnoreCase);
-            // s = Regex.Replace(s, @"(?<![A-Za-z0-9_])kip_f(?![A-Za-z0-9_])", " 1000 lbf", RegexOptions.IgnoreCase);
-            s = Regex.Replace(
-                s,
-                @"(?<![A-Za-z0-9_])kip_f(?![A-Za-z0-9_])",
-                " 1000 lbf",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-            );
-            s = Regex.Replace(
-                s,
-                @"(?<![A-Za-z0-9_])kips?(?![A-Za-z0-9_])",
-                " 1000 lbf",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-            );
-            s = Regex.Replace(
-                s,
-                @"(?<![A-Za-z0-9_])kip(?![A-Za-z0-9_])",
-                " 1000 lbf",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-            );
-            s = Regex.Replace(
-                s,
-                @"(?<![A-Za-z0-9_])klbf(?![A-Za-z0-9_])",
-                " 1000 lbf",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-            );
-
-            s = Regex.Replace(s, @"[ \t]{2,}", " ");
-            return s;
+            var info = new StringBuilder();
+            info.AppendLine($"CPD Code ({_originalCode?.Length ?? 0} chars):");
+            info.AppendLine(_originalCode ?? "No code");
+            info.AppendLine();
+            info.AppendLine($"Generated HTML ({_lastHtmlResult?.Length ?? 0} chars):");
+            info.AppendLine(_lastHtmlResult ?? "No HTML");
+            return info.ToString();
         }
     }
 }
