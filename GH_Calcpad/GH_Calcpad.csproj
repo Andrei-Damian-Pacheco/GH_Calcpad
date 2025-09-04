@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
@@ -7,46 +6,56 @@
     <NoWarn>NU1701;NETSDK1086</NoWarn>
     <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    
-    <!-- Assembly Information -->
     <AssemblyTitle>GH_Calcpad</AssemblyTitle>
     <AssemblyDescription>Complete Calcpad integration in Grasshopper with revolutionary optimization</AssemblyDescription>
     <AssemblyCompany>Andrei Damian Pacheco</AssemblyCompany>
     <AssemblyProduct>GH_Calcpad</AssemblyProduct>
-    <AssemblyCopyright>Copyright © 2024 Andrei Damian Pacheco</AssemblyCopyright>
     <Version>1.0.0</Version>
-    
-    <!-- Build Configuration -->
-    <BaseOutputPath>C:\Users\admin\AppData\Roaming\Grasshopper\Libraries</BaseOutputPath>
-    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+
+    <!-- Salida directa a la carpeta de Grasshopper -->
+    <BaseOutputPath>C:\Users\USER\AppData\Roaming\Grasshopper\Libraries\Debug\net48</BaseOutputPath>
+    <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
-  
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
   <ItemGroup>
-    <Compile Remove="Components\GH_Calcpad_Load_cpdz.cs" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <None Include="Components\GH_Calcpad_Load_cpdz.cs" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
 
-  <!-- Package References -->
   <ItemGroup>
-    <PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" />
+    <None Remove="Syntaxis\Calcpad-syntax-for-Notepad++.xml" />
+    <None Remove="Syntaxis\Calcpad-syntax-for-Notepad++dark.xml" />
+    <None Remove="Syntaxis\calcpad.xml" />
   </ItemGroup>
 
-  <!-- Calcpad Dependencies -->
+  <ItemGroup>
+    <EmbeddedResource Include="Syntaxis\Calcpad-syntax-for-Notepad++.xml" />
+    <EmbeddedResource Include="Syntaxis\Calcpad-syntax-for-Notepad++dark.xml" />
+    <EmbeddedResource Include="Syntaxis\calcpad.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="Calcpad.Core">
-      <HintPath>C:\Program Files\Calcpad\Calcpad.Core.dll</HintPath>
-      <Private>true</Private>
+      <HintPath>Libraries\Calcpad.Core.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="PyCalcpad">
-      <HintPath>C:\Program Files\Calcpad\PyCalcpad.dll</HintPath>
-      <Private>true</Private>
+      <HintPath>Libraries\PyCalcpad.dll</HintPath>
+      <Private>false</Private>
     </Reference>
   </ItemGroup>
 
-  <!-- Resources -->
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -54,16 +63,10 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-  
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  
-  <ItemGroup>
-    <Folder Include="Libraries\" />
-  </ItemGroup>
-
 </Project>

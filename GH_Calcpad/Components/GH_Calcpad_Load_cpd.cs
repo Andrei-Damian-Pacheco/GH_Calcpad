@@ -1,20 +1,16 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Grasshopper.Kernel;
-using GH_Calcpad.Classes;    // Namespace where we define CalcpadSheet
+using GH_Calcpad.Classes;    // CalcpadSheet, CalcpadSyntax
 using GH_Calcpad.Properties;  // Resources (icon)
 
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// GH Component to read a .cpd file directly as text,
-    /// extract variables, values and units without using intermediate HTML,
-    /// and generate a CalcpadSheet for later use.
-    /// Monitors file changes for automatic recomputation.
+    /// Lee un .cpd/.txt (código Calcpad), extrae variables/valores/unidades
+    /// usando un parser basado en la sintaxis oficial (XML/Notepad++) con fallback.
     /// </summary>
     public class GH_Calcpad_Load_cpd : GH_Component
     {
@@ -23,21 +19,21 @@ namespace GH_Calcpad.Components
         public GH_Calcpad_Load_cpd()
           : base("Load CPD", "LoadCPD",
                  "Reads a .cpd file and extracts variables, values and units",
-                 "Calcpad", "2. File Loading")  // Load CPD
+                 "Calcpad", "2. File Loading")
         { }
 
-        protected override void RegisterInputParams(GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager p)
         {
-            pManager.AddTextParameter("FilePath", "P", "Complete path to .cpd file", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("CaptureExplicit", "C", "If True, only captures variables with format variable=?{value}unit or valueunit';'variable", GH_ParamAccess.item, false);
+            p.AddTextParameter("FilePath", "P", "Complete path to .cpd (or .txt) file", GH_ParamAccess.item);
+            p.AddBooleanParameter("CaptureExplicit", "C", "If True, only captures explicit variables: 'var=?{val}unit' or 'valunit';'var'", GH_ParamAccess.item, false);
         }
 
-        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager p)
         {
-            pManager.AddTextParameter("Variables", "N", "Names of all variables found", GH_ParamAccess.list);
-            pManager.AddNumberParameter("Values", "V", "Numeric values associated 1:1 with Variables", GH_ParamAccess.list);
-            pManager.AddTextParameter("Units", "U", "Units corresponding 1:1 with Variables", GH_ParamAccess.list);
-            pManager.AddGenericParameter("SheetObj", "S", "CalcpadSheet instance for later consumption", GH_ParamAccess.item);
+            p.AddTextParameter("Variables", "N", "Names of all variables found", GH_ParamAccess.list);
+            p.AddNumberParameter("Values", "V", "Numeric values associated 1:1 with Variables", GH_ParamAccess.list);
+            p.AddTextParameter("Units", "U", "Units corresponding 1:1 with Variables", GH_ParamAccess.list);
+            p.AddGenericParameter("SheetObj", "S", "CalcpadSheet instance for later consumption", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -49,125 +45,30 @@ namespace GH_Calcpad.Components
 
             SetupFileWatcher(path);
 
-            if (!File.Exists(path))
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"File does not exist:\n{path}");
                 return;
             }
 
+            string content;
             try
             {
-                string content = File.ReadAllText(path, Encoding.UTF8);
+                content = File.ReadAllText(path, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Could not read file: {ex.Message}");
+                return;
+            }
 
-                var names = new List<string>();
-                var values = new List<double>();
-                var units = new List<string>();
+            try
+            {
+                // Nuevo parser basado en sintaxis
+                CalcpadSyntax.Instance.ParseVariables(content, captureExplicit, out var names, out var values, out var units);
 
-                if (!captureExplicit)
-                {
-                    // Path 1: General functional regex
-                    string pattern = @"\b([^\s=]+)\b\s*=\s*(?:([0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)|\?\s*\{\s*([0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)\s*\})([^'\r\n]*)";
-                    var regex = new Regex(pattern);
-
-                    foreach (Match m in regex.Matches(content))
-                    {
-                        string name = m.Groups[1].Value.Trim();
-                        if (name.Contains("';'"))
-                        {
-                            int idx = name.LastIndexOf("';'") + 3;
-                            if (idx < name.Length)
-                                name = name.Substring(idx).Trim();
-                        }
-
-                        string direct = m.Groups[2].Value;
-                        string braced = m.Groups[3].Value;
-                        string unit = m.Groups[4].Value.Trim();
-
-                        string num = !string.IsNullOrEmpty(direct) ? direct : braced;
-
-                        if (string.IsNullOrEmpty(num))
-                            continue;
-
-                        if (Regex.IsMatch(num, @"[\*\^\/\+\-\(]|max|min", RegexOptions.IgnoreCase))
-                            continue;
-
-                        double val = double.NaN;
-                        if (double.TryParse(num, NumberStyles.Any, CultureInfo.InvariantCulture, out double tmp))
-                            val = tmp;
-
-                        names.Add(name);
-                        values.Add(val);
-                        units.Add(string.IsNullOrWhiteSpace(unit) ? string.Empty : unit);
-                    }
-                }
-                else
-                {
-                    // Explicit mode: captures both formats
-                    // 1. variable = ? {value}unit
-                    // 2. valueunit';'variable (in middle of line)
-                    string patternE1 = @"\b([^\s=]+)\b\s*=\s*\?\s*\{\s*([0-9]+(?:\.[0-9]+)?(?:[eE][+\-]?[0-9]+)?)\s*\}([^\r\n']*)";
-                    string patternE2 = @"([0-9]+(?:\.[0-9]+)?(?:[eE][+\-]?[0-9]+)?)([^\r\n]*?)';'([^\s=]+)";
-                    var regexE1 = new Regex(patternE1);
-                    var regexE2 = new Regex(patternE2);
-
-                    var namesSet = new HashSet<string>();
-
-                    // 1. variable = ? {value}unit
-                    foreach (Match m in regexE1.Matches(content))
-                    {
-                        string rawName = m.Groups[1].Value.Trim();
-                        // If variable comes after a single quote
-                        if (rawName.Contains("'"))
-                        {
-                            var parts = rawName.Split(new[] { '\'' }, StringSplitOptions.RemoveEmptyEntries);
-                            rawName = parts[parts.Length - 1].Trim();
-                        }
-                        string numStr = m.Groups[2].Value.Trim();
-                        string unit = m.Groups[3].Value.Trim();
-                        if (double.TryParse(numStr, NumberStyles.Any,
-                            CultureInfo.InvariantCulture, out double val))
-                        {
-                            if (namesSet.Add(rawName))
-                            {
-                                names.Add(rawName);
-                                values.Add(val);
-                                units.Add(unit);
-                            }
-                        }
-                    }
-
-                    // 2. valueunit';'variable
-                    foreach (Match m in regexE2.Matches(content))
-                    {
-                        string numStr = m.Groups[1].Value.Trim();
-                        string unit = m.Groups[2].Value.Trim();
-                        string rawName = m.Groups[3].Value.Trim();
-                        if (double.TryParse(numStr, NumberStyles.Any,
-                            CultureInfo.InvariantCulture, out double val))
-                        {
-                            if (namesSet.Add(rawName))
-                            {
-                                names.Add(rawName);
-                                values.Add(val);
-                                units.Add(unit);
-                            }
-                        }
-                    }
-                }
-
-                // ✅ Create CalcpadSheet with enhanced API
-                var sheetObj = new CalcpadSheet(names, values, units);
-                
-                // ✅ CRITICAL: Set complete code so Calculator works
-                try
-                {
-                    sheetObj.SetFullCode(content);
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "CPD code loaded correctly into CalcpadSheet.");
-                }
-                catch (Exception ex)
-                {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Error setting code in CalcpadSheet: {ex.Message}");
-                }
+                var sheet = new CalcpadSheet(names, values, units);
+                try { sheet.SetFullCode(content); } catch { }
 
                 if (names.Count != values.Count || values.Count != units.Count)
                     AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Mismatch in Variables/Values/Units");
@@ -175,16 +76,14 @@ namespace GH_Calcpad.Components
                 DA.SetDataList(0, names);
                 DA.SetDataList(1, values);
                 DA.SetDataList(2, units);
-                DA.SetData(3, sheetObj);
+                DA.SetData(3, sheet);
 
-                if (captureExplicit)
-                {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Variables captured with format variable=?{value}unit and valueunit';'variable. If you want to capture all, set boolean to False.");
-                }
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
+                    $"Loaded {names.Count} variable(s) | ExplicitMode={captureExplicit}");
             }
             catch (Exception ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error loading CPD: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Parse error: {ex.Message}");
             }
         }
 
@@ -194,13 +93,17 @@ namespace GH_Calcpad.Components
             try
             {
                 string dir = Path.GetDirectoryName(filePath) ?? string.Empty;
-                string name = Path.GetFileName(filePath);
+                string file = Path.GetFileName(filePath);
+                if (_watcher != null && _watcher.Path == dir && _watcher.Filter == file)
+                    return;
+
                 if (_watcher != null)
                 {
-                    if (_watcher.Path == dir && _watcher.Filter == name) return;
                     _watcher.Dispose();
+                    _watcher = null;
                 }
-                _watcher = new FileSystemWatcher(dir, name)
+
+                _watcher = new FileSystemWatcher(dir, file)
                 {
                     NotifyFilter = NotifyFilters.LastWrite,
                     EnableRaisingEvents = true
@@ -210,7 +113,20 @@ namespace GH_Calcpad.Components
             catch { }
         }
 
+        public override void RemovedFromDocument(Grasshopper.Kernel.GH_Document document)
+        {
+            try
+            {
+                _watcher?.Dispose();
+                _watcher = null;
+            }
+            catch { /* ignore */ }
+
+            base.RemovedFromDocument(document);
+        }
+
+        public override Guid ComponentGuid => new Guid("7A4CE2C1-4F7D-4C7E-A5E1-5B0C2F7E8F13");
         protected override System.Drawing.Bitmap Icon => Resources.Icon_Calc;
-        public override Guid ComponentGuid => new Guid("546918D1-6906-4258-9A1F-1378EA19257C");
+        public override GH_Exposure Exposure => GH_Exposure.primary;
     }
 }

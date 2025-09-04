@@ -10,19 +10,18 @@ using GH_Calcpad.Properties;
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// Component for saving modified CPD file after calculation.
-    /// Preserves changes made to variables and generates a new version of the file.
+    /// Component for saving modified CPD/TXT file after calculation.
     /// Workflow: Load → ModVar → Play → SaveCPD
     /// </summary>
     public class GH_Calcpad_Save_cpd : GH_Component
     {
         public GH_Calcpad_Save_cpd()
           : base(
-                "Save CPD",            // Component name
-                "SaveCPD",             // Nickname
-                "Saves modified CPD file with new variable values",
-                "Calcpad",             // Category
-                "6. Saving & Export"      // Save CPD
+                "Save CPD/TXT",
+                "SaveCPD",
+                "Saves modified code as .cpd (default) or .txt",
+                "Calcpad",
+                "6. Saving & Export"
             )
         { }
 
@@ -32,225 +31,231 @@ namespace GH_Calcpad.Components
                 "Updated Sheet", "US",
                 "Updated CalcpadSheet (from Play CPD)",
                 GH_ParamAccess.item);
+
             p.AddTextParameter(
-                "File Name", "N",
-                "Name for the CPD file (without extension)",
+                "File", "N",
+                "Base name (without extension); existing extension will be ignored",
                 GH_ParamAccess.item);
+
             p.AddTextParameter(
                 "Output Folder", "F",
-                "Destination folder path (optional - if empty, uses Desktop)",
+                "Destination folder path",
                 GH_ParamAccess.item);
+
             p.AddBooleanParameter(
-                "Overwrite", "OW",
-                "If True, overwrites existing file. If False, fails if file already exists",
-                GH_ParamAccess.item, false);
-            p.AddBooleanParameter(
-                "Execute", "X",
-                "Set to True to execute the CPD save operation",
+                "CPD/TXT", "FMT",
+                "False = .cpd (default), True = .txt",
                 GH_ParamAccess.item, false);
 
-            // Make parameters optional
-            p[1].Optional = true;
-            p[2].Optional = true;
-            p[3].Optional = true;
+            p.AddBooleanParameter(
+                "Execute", "X",
+                "True = save",
+                GH_ParamAccess.item, false);
+
+            // Opcionales (como en el resto de exportadores)
+            p[1].Optional = true; // N
+            p[2].Optional = true; // F
+            p[3].Optional = true; // FMT
+            // X no opcional (por consistencia con los demás)
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager p)
         {
             p.AddTextParameter(
                 "Save Path", "SP",
-                "Complete path of the saved CPD file",
+                "Complete path of the saved file",
                 GH_ParamAccess.item);
+
             p.AddBooleanParameter(
                 "Success", "S",
-                "True if file was saved successfully",
+                "True if file was saved or already up-to-date",
                 GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            // 1) Get inputs
+            // 1) Inputs
             object data = null;
             string fileName = null;
             string outputFolder = null;
-            bool overwrite = false;
+            bool saveAsTxt = false;
             bool execute = false;
 
-            if (!DA.GetData(0, ref data))
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Updated Sheet not received.");
-                return;
-            }
-
+            if (!DA.GetData(0, ref data)) return;
             DA.GetData(1, ref fileName);
             DA.GetData(2, ref outputFolder);
-            DA.GetData(3, ref overwrite);
+            DA.GetData(3, ref saveAsTxt);
             DA.GetData(4, ref execute);
 
-            // 2) Early exit if Execute = False
             if (!execute)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Set Execute=True to perform CPD save operation");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Pon Execute=True para guardar CPD/TXT");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
             }
 
-            // 3) Unwrap CalcpadSheet
-            CalcpadSheet sheet = null;
-            if (data is GH_ObjectWrapper wrapper)
+            if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                sheet = wrapper.Value as CalcpadSheet;
-            }
-            else
-            {
-                sheet = data as CalcpadSheet;
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'Output Folder'. No se guarda hasta tener ruta.");
+                DA.SetData(0, null);
+                DA.SetData(1, false);
+                return;
             }
 
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'File'. No se guarda hasta tener nombre.");
+                DA.SetData(0, null);
+                DA.SetData(1, false);
+                return;
+            }
+
+            // 2) Unwrap
+            CalcpadSheet sheet = (data as GH_ObjectWrapper)?.Value as CalcpadSheet ?? data as CalcpadSheet;
             if (sheet == null)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, 
-                    "The received object is not a valid CalcpadSheet.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "The received object is not a valid CalcpadSheet.");
                 return;
             }
 
-            // 4) Validate that sheet has CPD code available
-            string cpdCode = sheet.OriginalCode;
-            if (string.IsNullOrEmpty(cpdCode))
+            // 3) Código
+            string code = sheet.OriginalCode;
+            if (string.IsNullOrEmpty(code))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    "CalcpadSheet contains no CPD code. Use a sheet from 'Load CPD' or 'Load CPDz'.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "CalcpadSheet contains no code. Usa 'Play CPD' antes.");
                 return;
             }
 
-            // 5) Determine file name and paths
-            string finalFileName = string.IsNullOrWhiteSpace(fileName) 
-                ? $"CalcpadSave_{DateTime.Now:yyyyMMdd_HHmmss}" 
-                : fileName.Trim().Replace(".cpd", "");
+            // 4) Paths (sin fallbacks)
+            string baseName = Path.GetFileNameWithoutExtension(fileName.Trim());
+            string folder = outputFolder.Trim();
 
-            string finalFolder = string.IsNullOrWhiteSpace(outputFolder) 
-                ? Environment.GetFolderPath(Environment.SpecialFolder.Desktop) 
-                : outputFolder.Trim();
+            string ext = saveAsTxt ? ".txt" : ".cpd";
+            string finalPath = Path.Combine(folder, baseName + ext);
 
-            string finalPath = Path.Combine(finalFolder, finalFileName + ".cpd");
-
-            // 6) Validate and create destination directory
+            // 5) Asegurar carpeta
             try
             {
-                if (!Directory.Exists(finalFolder))
+                if (!Directory.Exists(folder))
                 {
-                    Directory.CreateDirectory(finalFolder);
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Directory created: {finalFolder}");
+                    Directory.CreateDirectory(folder);
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Directorio creado: {folder}");
                 }
             }
             catch (Exception ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Could not create directory: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"No se pudo crear el directorio: {ex.Message}");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
             }
 
-            // 7) Validate existing file
-            if (File.Exists(finalPath) && !overwrite)
+            // 6) Si existe y el contenido es igual, no reescribir
+            try
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    $"File already exists and Overwrite=False: {finalPath}");
-                DA.SetData(0, null);
-                DA.SetData(1, false);
-                return;
+                if (File.Exists(finalPath))
+                {
+                    string existing = File.ReadAllText(finalPath, Encoding.UTF8);
+                    if (StringEqualsNormalized(existing, code))
+                    {
+                        DA.SetData(0, finalPath);
+                        DA.SetData(1, true);
+                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Archivo ya actualizado. No se reescribe.");
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Omitiendo comprobación de contenido: {ex.Message}");
             }
 
-            // 8) Perform CPD file save
+            // 7) Escritura segura (tmp + replace/move)
             bool success = false;
             long fileSize = 0;
+            string tmpPath = finalPath + ".tmp";
 
             try
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                    $"Saving CPD: {cpdCode.Length} chars → {finalFileName}.cpd");
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                    $"Target path: {finalPath}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Guardando ({ext}) {code.Length} chars → {baseName}{ext}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Ruta objetivo: {finalPath}");
 
-                // Save CPD code with UTF-8 encoding
-                File.WriteAllText(finalPath, cpdCode, Encoding.UTF8);
+                File.WriteAllText(tmpPath, code, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-                // Verify file was saved correctly
+                if (File.Exists(finalPath))
+                    File.Replace(tmpPath, finalPath, null);
+                else
+                    File.Move(tmpPath, finalPath);
+
                 if (File.Exists(finalPath))
                 {
-                    var fileInfo = new FileInfo(finalPath);
-                    fileSize = fileInfo.Length;
+                    fileSize = new FileInfo(finalPath).Length;
                     success = true;
-
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                        $"✅ CPD saved successfully: {fileSize:N0} bytes");
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"✅ Archivo guardado: {fileSize:N0} bytes");
                 }
                 else
                 {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                        "CPD file was not saved correctly.");
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Archivo no guardado.");
                 }
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    $"No permission to write to: {finalPath}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Sin permisos para escribir en: {finalPath}");
+                TryDelete(tmpPath);
             }
-            catch (DirectoryNotFoundException ex)
+            catch (DirectoryNotFoundException)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    $"Directory not found: {finalFolder}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Directorio no encontrado: {folder}");
+                TryDelete(tmpPath);
             }
-            catch (PathTooLongException ex)
+            catch (PathTooLongException)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    $"Path too long: {finalPath}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Ruta demasiado larga: {finalPath}");
+                TryDelete(tmpPath);
             }
             catch (IOException ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    $"File I/O error: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error de I/O: {ex.Message}");
+                TryDelete(tmpPath);
             }
             catch (Exception ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    $"Error saving CPD: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error al guardar: {ex.Message}");
+                TryDelete(tmpPath);
             }
 
-            // 9) Set outputs
+            // 8) Outputs
             DA.SetData(0, success ? finalPath : null);
             DA.SetData(1, success);
 
-            // 10) Final status message
             if (success)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                    $"✅ CPD save completed → {Path.GetFileName(finalPath)} | " +
-                    $"Size: {fileSize / 1024.0:F1} KB | Variables: {sheet.Variables?.Count ?? 0}");
+                    $"✅ Guardado → {Path.GetFileName(finalPath)} | {fileSize / 1024.0:F1} KB | Variables: {sheet.Variables?.Count ?? 0}");
             }
             else
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "❌ CPD save failed");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "❌ Guardado fallido");
             }
         }
 
-        public override Guid ComponentGuid
-            => new Guid("E5F6A7B8-C9D0-4E1F-2A3B-4C5D6E7F8A9B");
-
-        protected override Bitmap Icon
-            => Resources.Icon_Save;
-
-        /// <summary>
-        /// Additional component information
-        /// </summary>
-        public override string ToString()
+        private static bool StringEqualsNormalized(string a, string b)
         {
-            return "GH_Calcpad_Save_cpd: Modified CPD file saver with controlled execution";
+            if (a == null || b == null) return a == b;
+            string na = a.Replace("\r\n", "\n").Replace("\r", "\n");
+            string nb = b.Replace("\r\n", "\n").Replace("\r", "\n");
+            return string.Equals(na, nb, StringComparison.Ordinal);
         }
 
-        /// <summary>
-        /// Exposure level in interface
-        /// </summary>
+        private static void TryDelete(string path)
+        {
+            try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); } catch { }
+        }
+
+        public override Guid ComponentGuid => new Guid("E5F6A7B8-C9D0-4E1F-2A3B-4C5D6E7F8A9B");
+        protected override Bitmap Icon => Resources.Icon_Save;
+        public override string ToString() => "GH_Calcpad_Save_cpd: CPD/TXT saver";
         public override GH_Exposure Exposure => GH_Exposure.primary;
     }
 }

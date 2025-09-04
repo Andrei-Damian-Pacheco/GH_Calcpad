@@ -1,0 +1,78 @@
+¡Ah, ahora entiendo correctamente! Me disculpo por la confusión.
+
+**PROBLEMA REAL:**
+- **Explicit = False** → Resultado CORRECTO: 3 ecuaciones (R, S, T)
+- **Explicit = True** → Resultado INCORRECTO: 7 ecuaciones (incluye L, t, N_3, N_4 que NO deben ser ecuaciones)
+
+Cuando `Explicit = True`, el método `IsEquationDefinition()` está **incorrectamente detectando** las variables explícitas como ecuaciones debido a los caracteres especiales `? { }`.
+
+## Solución correcta:
+
+Necesito modificar el método `IsEquationDefinition()` en `CalcpadSheet.cs` para que **EXCLUYA** las variables con formato explícito:
+
+```csharp
+/// <summary>
+/// ✅ DETERMINES if a line defines a result equation - FIXED TO EXCLUDE EXPLICIT VARIABLES
+/// </summary>
+private bool IsEquationDefinition(string line)
+{
+    if (!line.Contains("="))
+        return false;
+
+    var parts = line.Split('=');
+    if (parts.Length < 2)
+        return false;
+
+    string leftSide = parts[0].Trim();
+    string rightSide = parts[1].Trim();
+
+    // ✅ CRITICAL FIX: EXCLUDE EXPLICIT FORMAT variables (these are NOT equations)
+    // Pattern: variable = ? {value}unit
+    if (rightSide.TrimStart().StartsWith("?") && rightSide.Contains("{") && rightSide.Contains("}"))
+    {
+        return false; // This is an explicit input variable, NOT an equation
+    }
+
+    // Left side must be a simple variable
+    if (!Regex.IsMatch(leftSide, @"^[a-zA-Z_][a-zA-Z0-9_'′,\.]*$"))
+        return false;
+
+    // Clean comments
+    int commentIndex = rightSide.IndexOf('#');
+    if (commentIndex >= 0)
+        rightSide = rightSide.Substring(0, commentIndex).Trim();
+
+    commentIndex = rightSide.IndexOf('\'');
+    if (commentIndex >= 0)
+        rightSide = rightSide.Substring(0, commentIndex).Trim();
+
+    // ✅ ONLY EQUATIONS: Right side must contain operations or variables (not just numbers)
+    bool hasOperations = rightSide.Contains("+") || rightSide.Contains("-") || 
+                       rightSide.Contains("*") || rightSide.Contains("/") || 
+                       rightSide.Contains("(") || rightSide.Contains("sqrt") ||
+                       rightSide.Contains("^") || rightSide.Contains("sin") ||
+                       rightSide.Contains("cos") || rightSide.Contains("tan") ||
+                       rightSide.Contains("log") || rightSide.Contains("exp");
+
+    bool hasVariables = Regex.IsMatch(rightSide, @"[a-zA-Z_][a-zA-Z0-9_'′,\.]*");
+
+    return hasOperations || hasVariables;
+}
+```
+
+## Lo que hace esta corrección:
+
+**ANTES (Incorrecto cuando Explicit = True):**
+- `L = ? {10}cm` → ❌ Detectado como ecuación (por los caracteres `? { }`)
+- `t = ? {40}cm` → ❌ Detectado como ecuación
+- `N_3 = ? {70}kN` → ❌ Detectado como ecuación  
+- `N_4 = ? {80}kN` → ❌ Detectado como ecuación
+
+**DESPUÉS (Correcto):**
+- `L = ? {10}cm` → ✅ NO es ecuación (es variable de entrada)
+- `t = ? {40}cm` → ✅ NO es ecuación (es variable de entrada)
+- `R = L + b + h + t` → ✅ SÍ es ecuación (tiene operaciones)
+- `S = N_1 + N_2 + N_3 + N_4` → ✅ SÍ es ecuación (tiene operaciones)
+- `T = sqrt(50)*(L/b)^2` → ✅ SÍ es ecuación (tiene operaciones)
+
+Con este cambio, tanto `Explicit = True` como `Explicit = False` mostrarán exactamente **3 ecuaciones** (R, S, T) y **3 valores** como debe ser.

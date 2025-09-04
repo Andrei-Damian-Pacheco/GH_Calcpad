@@ -3,11 +3,18 @@ using Grasshopper;
 using Grasshopper.Kernel;
 using System;
 using System.Drawing;
+using GH_Calcpad.Classes;
 
 namespace GH_Calcpad
 {
     public class GH_CalcpadInfo : GH_AssemblyInfo
     {
+        static GH_CalcpadInfo()
+        {
+            // Hook del resolver al cargar el ensamblado
+            AssemblyResolver.EnsureHook();
+        }
+
         public override string Name => "GH_Calcpad";
 
         /// <summary>
