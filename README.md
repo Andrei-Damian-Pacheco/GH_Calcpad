@@ -12,27 +12,27 @@
 ## 📥 Descargas
 
 <p align="center">
-  <!-- Sustituye la URL del ZIP por el asset real de la release -->
-  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/releases/download/v1.2.0/GH_Calcpad_v1.2.0.zip">
+  <!-- Enlaces actualizados -->
+  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Plugin/GH_Calcpad.zip">
     <img src="https://img.shields.io/badge/Plugin-.zip%20(v1.2.0)-blue?style=for-the-badge" alt="Download ZIP">
   </a>
-  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/raw/master/Documents/Instructivo_GH-Calcpad.pdf">
+  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Instructivo/GH_Calcpad.pdf">
     <img src="https://img.shields.io/badge/Manual-PDF-orange?style=for-the-badge" alt="Manual PDF">
   </a>
   <a href="https://www.food4rhino.com/en/app/calcpad">
     <img src="https://img.shields.io/badge/Food4Rhino-Page-green?style=for-the-badge" alt="Food4Rhino">
   </a>
-  <a href="#examples">
-    <img src="https://img.shields.io/badge/Examples-Coming%20Soon-lightgrey?style=for-the-badge" alt="Examples">
+  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Examples/Example_01.cpd">
+    <img src="https://img.shields.io/badge/Examples-Example%2001-brightgreen?style=for-the-badge" alt="Examples">
   </a>
 </p>
 
 | Recurso | Descripción | Enlace |
 |---------|-------------|--------|
-| Plugin (.zip) | `.gha` + DLL necesarias + manual | [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/releases/download/v1.2.0/GH_Calcpad_v1.2.0.zip) |
-| Manual PDF | Instructivo_GH-Calcpad.pdf | [Ver / Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/raw/master/Documents/Instructivo_GH-Calcpad.pdf) |
+| Plugin (.zip) | `.gha` + DLL necesarias + manual | [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Plugin/GH_Calcpad.zip) |
+| Manual PDF | Instructivo/GH_Calcpad.pdf | [Ver / Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Instructivo/GH_Calcpad.pdf) |
 | Food4Rhino | Página oficial | [Abrir](https://www.food4rhino.com/en/app/calcpad) |
-| Examples (próx.) | Casos de uso y optimización | (Pendiente) |
+| Example 01 | Hoja de ejemplo `.cpd` | [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Examples/Example_01.cpd) |
 
 ---
 
@@ -41,7 +41,7 @@
 Calcpad proporciona un motor de cálculo declarativo con manejo de unidades y generación de resultados. GH_Calcpad lo integra directamente en Grasshopper para habilitar:
 - Ejecución nativa de hojas `.cpd`
 - Cambios selectivos de variables sin reordenar listas
-- Optimización multi‑objetivo (Optimizer + Galapagos / Octopus)
+- Optimización multi-objetivo (Optimizer + Galapagos / Octopus)
 - Extracción filtrada de resultados
 - Exportación profesional (HTML / PDF / Word)
 
@@ -99,7 +99,7 @@ Calcpad proporciona un motor de cálculo declarativo con manejo de unidades y ge
 
 ## ⚡ Quick Start
 
-1. Coloca **Load CPD** y asigna ruta a un `.cpd`.  
+1. Coloca **Load CPD** y asigna ruta a un `.cpd` (por ejemplo, [Example_01.cpd](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Examples/Example_01.cpd)).  
 2. (Opcional) **Search Variables** para modificar algunos parámetros.  
 3. Conecta a **Play CPD** → obtienes ecuaciones, valores y unidades.  
 4. (Opcional) **Search Results** para filtrar específicos.  
