@@ -12,27 +12,39 @@
 ## 📥 Descargas
 
 <p align="center">
-  <!-- Enlaces con descarga directa -->
+  <!-- Plugin: descarga directa -->
   <a href="https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Plugin/GH_Calcpad.zip">
     <img src="https://img.shields.io/badge/Plugin-.zip%20(v1.2.0)-blue?style=for-the-badge" alt="Download ZIP">
   </a>
-  <a href="https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Instructivo/GH_Calcpad.pdf">
-    <img src="https://img.shields.io/badge/Manual-PDF-orange?style=for-the-badge" alt="Manual PDF">
+
+  <!-- Manual: VER (vista previa GitHub) -->
+  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Instructivo/GH_Calcpad.pdf">
+    <img src="https://img.shields.io/badge/Manual-VER-orange?style=for-the-badge" alt="Manual VER">
   </a>
+
+  <!-- Manual: DESCARGA DIRECTA -->
+  <a href="https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Instructivo/GH_Calcpad.pdf">
+    <img src="https://img.shields.io/badge/Manual-DESCARGAR-orange?style=for-the-badge" alt="Manual DESCARGAR">
+  </a>
+
+  <!-- Food4Rhino -->
   <a href="https://www.food4rhino.com/en/app/calcpad">
     <img src="https://img.shields.io/badge/Food4Rhino-Page-green?style=for-the-badge" alt="Food4Rhino">
   </a>
+
+  <!-- Example: descarga directa -->
   <a href="https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Examples/Example_01.cpd">
-    <img src="https://img.shields.io/badge/Examples-Example%2001-brightgreen?style=for-the-badge" alt="Examples">
+    <img src="https://img.shields.io/badge/Examples-Example%2001-brightgreen?style=for-the-badge" alt="Example 01">
   </a>
 </p>
 
 | Recurso | Descripción | Enlace |
 |---------|-------------|--------|
 | Plugin (.zip) | `.gha` + DLL necesarias + manual | [Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Plugin/GH_Calcpad.zip) |
-| Manual PDF | Instructivo/GH_Calcpad.pdf | [Ver / Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Instructivo/GH_Calcpad.pdf) |
+| Manual PDF | Instructivo GH_Calcpad.pdf | [Ver](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Instructivo/GH_Calcpad.pdf) / [Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Instructivo/GH_Calcpad.pdf) |
 | Food4Rhino | Página oficial | [Abrir](https://www.food4rhino.com/en/app/calcpad) |
-| Example 01 | Hoja de ejemplo `.cpd` | [Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Examples/Example_01.cpd) |
+| Examples   | Hoja de ejemplo `.cpd` | [Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Examples/Example_01.cpd) |
+
 
 
 ---
