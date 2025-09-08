@@ -177,12 +177,12 @@ namespace GH_Calcpad.Components
             }
         }
 
-        // Preferir variables provistas por el loader; si no hay, heurística
+        // Prefer variables provided by loader; if none available, use heuristics
         private List<string> AutoDetectDesignVariables(CalcpadSheet sheet)
         {
             var result = new List<string>();
 
-            // Si el loader aportó variables (explícitas o normales), úsalas directamente
+            // If the loader provided variables (explicit or normal), use them directly
             if (sheet.Variables != null && sheet.Variables.Count > 0)
             {
                 var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -194,7 +194,7 @@ namespace GH_Calcpad.Components
                 return result;
             }
 
-            // Fallback heurístico
+            // Heuristic fallback
             var candidates = new List<string>();
             for (int i = 0; i < sheet.Variables.Count; i++)
             {
@@ -205,7 +205,7 @@ namespace GH_Calcpad.Components
                     candidates.Add(sheet.Variables[i]);
             }
 
-            var designUnits = new[] { "mm", "m", "cm", "kn", "mpa", "kg", "°", "rad" }; // minúsculas
+            var designUnits = new[] { "mm", "m", "cm", "kn", "mpa", "kg", "°", "rad" }; // lowercase
             for (int i = 0; i < sheet.Variables.Count; i++)
             {
                 var unit = (i < sheet.Units.Count ? sheet.Units[i] : string.Empty).ToLowerInvariant();
@@ -233,7 +233,7 @@ namespace GH_Calcpad.Components
         {
             var objectives = new List<string>();
 
-            // Variables de ecuaciones reales (no asignaciones simples)
+            // Variables from real equations (not simple assignments)
             var eqs = sheet.GetResultEquations();
             var lhs = eqs.Select(ExtractVariableName).Where(s => !string.IsNullOrEmpty(s)).ToList();
 
@@ -248,7 +248,7 @@ namespace GH_Calcpad.Components
 
             if (objectives.Count == 0 && lhs.Count > 0)
             {
-                // Usa los últimos resultados calculados si no hay match por palabra clave
+                // Use the last calculated results if no keyword match
                 objectives.AddRange(lhs.Skip(Math.Max(0, lhs.Count - 3)));
             }
 
@@ -324,19 +324,19 @@ namespace GH_Calcpad.Components
         {
             try
             {
-                // Aplicar valores nuevos
+                // Apply new values
                 for (int i = 0; i < designVars.Count; i++)
                     sheet.SetVariable(designVars[i], varValues[i]);
 
-                // Ejecutar cálculo
+                // Execute calculation
                 sheet.Calculate();
 
-                // Extraer resultados
+                // Extract results
                 var equations = sheet.GetResultEquations();           // "LHS = RHS"
-                var results = sheet.GetResultValues();                // valores numéricos
+                var results = sheet.GetResultValues();                // numeric values
                 var lhs = equations.Select(ExtractVariableName).ToList();
 
-                // Mapa nombre->índice para acceso O(1)
+                // Name->index map for O(1) access
                 var indexByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 for (int i = 0; i < lhs.Count; i++)
                 {
@@ -344,17 +344,17 @@ namespace GH_Calcpad.Components
                         indexByName[lhs[i]] = i;
                 }
 
-                // Valores de objetivos en el mismo orden solicitado
+                // Objective values in requested order
                 var objectiveValues = new List<double>(objectiveNames.Count);
                 foreach (var objName in objectiveNames)
                 {
                     if (indexByName.TryGetValue(objName, out int idx) && idx >= 0 && idx < results.Count)
                         objectiveValues.Add(results[idx]);
                     else
-                        objectiveValues.Add(1e30); // Penalización si no se encuentra
+                        objectiveValues.Add(1e30); // Penalty if not found
                 }
 
-                // Fitness total
+                // Total fitness
                 double totalFitness = CalculateTotalFitness(objectiveValues, optimModes, targetValues);
 
                 string status = $"✅ Successful calculation | Objectives: {objectiveValues.Count} | Fitness: {totalFitness:G6}";
@@ -392,7 +392,7 @@ namespace GH_Calcpad.Components
                 switch (mode)
                 {
                     case "maximize":
-                        fitness = -val; // invertir para maximizar
+                        fitness = -val; // invert to maximize
                         break;
                     case "target":
                         double target = i < targetValues.Count ? targetValues[i] : 0.0;

@@ -3,16 +3,13 @@
     <TargetFramework>net48</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <TargetExt>.gha</TargetExt>
-    <NoWarn>NU1701;NETSDK1086</NoWarn>
     <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyTitle>GH_Calcpad</AssemblyTitle>
-    <AssemblyDescription>Complete Calcpad integration in Grasshopper with revolutionary optimization</AssemblyDescription>
+    <AssemblyDescription>Complete Calcpad integration in Grasshopper with optimization</AssemblyDescription>
     <AssemblyCompany>Andrei Damian Pacheco</AssemblyCompany>
     <AssemblyProduct>GH_Calcpad</AssemblyProduct>
-    <Version>1.0.0</Version>
-
-    <!-- Salida directa a la carpeta de Grasshopper -->
+    <Version>1.2.0</Version>
     <BaseOutputPath>C:\Users\USER\AppData\Roaming\Grasshopper\Libraries\Debug\net48</BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
@@ -21,19 +18,7 @@
     <Optimize>true</Optimize>
     <DebugType>none</DebugType>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Reference Include="System.IO.Compression" />
-    <Reference Include="System.IO.Compression.FileSystem" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Syntaxis\Calcpad-syntax-for-Notepad++.xml" />
-    <None Remove="Syntaxis\Calcpad-syntax-for-Notepad++dark.xml" />
-    <None Remove="Syntaxis\calcpad.xml" />
-  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Syntaxis\Calcpad-syntax-for-Notepad++.xml" />
@@ -42,12 +27,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Grasshopper" Version="8.21.25188.17001" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="Calcpad.Core">
       <HintPath>Libraries\Calcpad.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Calcpad">
+      <HintPath>Libraries\Calcpad.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="PyCalcpad">
@@ -62,11 +53,54 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+
+  <ItemGroup>
+    <SlimLibs Include="Libraries\Calcpad.Core.dll" />
+    <SlimLibs Include="Libraries\Calcpad.dll" />
+    <SlimLibs Include="Libraries\PyCalcpad.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Components\GH_Calcpad_Load_cpdz.cs" />
+    <None Include="Components\GH_Calcpad_Load_cpdz.cs" />
+  </ItemGroup>
+
+  <Target Name="CheckCalcpadLibs" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('Libraries\Calcpad.Core.dll')" Text="Missing Libraries\Calcpad.Core.dll" />
+    <Error Condition="!Exists('Libraries\Calcpad.dll')" Text="Missing Libraries\Calcpad.dll" />
+    <Error Condition="!Exists('Libraries\PyCalcpad.dll')" Text="Missing Libraries\PyCalcpad.dll" />
+  </Target>
+
+  <Target Name="CopySlimLibs" AfterTargets="Build">
+    <Copy SourceFiles="@(SlimLibs)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <PropertyGroup>
+    <DesktopPath>$(UserProfile)\Desktop</DesktopPath>
+    <DistDir>$(DesktopPath)\GH_Calcpad</DistDir>
+    <DistZip>$(DesktopPath)\GH_Calcpad.zip</DistZip>
+  </PropertyGroup>
+
+  <Target Name="PackageZip" AfterTargets="Build">
+    <RemoveDir Directories="$(DistDir)" Condition="Exists('$(DistDir)')" />
+    <MakeDir Directories="$(DistDir)" />
+
+    <ItemGroup>
+      <PackFiles Include="$(TargetDir)GH_Calcpad.gha" />
+      <PackFiles Include="$(TargetDir)Calcpad.Core.dll" Condition="Exists('$(TargetDir)Calcpad.Core.dll')" />
+      <PackFiles Include="$(TargetDir)Calcpad.dll" Condition="Exists('$(TargetDir)Calcpad.dll')" />
+      <PackFiles Include="$(TargetDir)PyCalcpad.dll" Condition="Exists('$(TargetDir)PyCalcpad.dll')" />
+      <PackFiles Include="$(ProjectDir)Documents\Instructivo_GH-Calcpad.pdf" Condition="Exists('$(ProjectDir)Documents\Instructivo_GH-Calcpad.pdf')" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(PackFiles)" DestinationFolder="$(DistDir)" SkipUnchangedFiles="false" />
+    <Delete Files="$(DistZip)" Condition="Exists('$(DistZip)')" />
+    <Exec Command="powershell -NoLogo -NoProfile -Command &quot;Compress-Archive -Path '$(DistDir)\*' -DestinationPath '$(DistZip)' -Force&quot;" />
+    <Message Text="Created ZIP: $(DistZip)" Importance="High" />
+  </Target>
 </Project>

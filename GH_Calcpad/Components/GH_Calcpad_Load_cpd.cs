@@ -9,8 +9,8 @@ using GH_Calcpad.Properties;  // Resources (icon)
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// Lee un .cpd/.txt (código Calcpad), extrae variables/valores/unidades
-    /// usando un parser basado en la sintaxis oficial (XML/Notepad++) con fallback.
+    /// Reads a .cpd/.txt file (Calcpad code), extracts variables/values/units
+    /// using a parser based on official syntax (XML/Notepad++) with fallback.
     /// </summary>
     public class GH_Calcpad_Load_cpd : GH_Component
     {
@@ -64,7 +64,7 @@ namespace GH_Calcpad.Components
 
             try
             {
-                // Nuevo parser basado en sintaxis
+                // New parser based on syntax
                 CalcpadSyntax.Instance.ParseVariables(content, captureExplicit, out var names, out var values, out var units);
 
                 var sheet = new CalcpadSheet(names, values, units);

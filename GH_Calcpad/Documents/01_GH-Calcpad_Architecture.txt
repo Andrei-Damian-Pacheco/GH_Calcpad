@@ -1,273 +1,89 @@
-PROJECT DESCRIPTION // VERSION 3 (COMPLETE IMPLEMENTATION)
+GH_CALCPAD ARCHITECTURE // VERSION 1.2.0
 
-1. OBJECTIVE: 
-============
-Integrate Calcpad into Grasshopper as a calculation engine optimized for automated processes and optimization algorithms. This plugin transforms Calcpad from a standalone calculation tool into a powerful Grasshopper component ecosystem, enabling seamless integration with parametric design workflows, optimization algorithms, and automated report generation.
+1. PROJECT OBJECTIVE:
+=====================
+Integration of Calcpad into Grasshopper as a comprehensive calculation engine with optimization capabilities. The plugin provides seamless workflow from file loading to professional report generation.
 
-CORE INNOVATIONS:
-- Revolutionary auto-optimization component with AI-powered variable detection
-- Intelligent caching system for massive performance improvements in optimization
-- Complete workflow automation from file loading to report generation
-- Multi-objective optimization with automatic convergence analysis
-- Native integration with Galapagos, Octopus, and genetic algorithms
+2. COMPONENT ARCHITECTURE:
+==========================
+TOTAL: 12 COMPONENTS organized in 6 logical workflow blocks
 
-2. PROJECT STRUCTURE:
-====================
-GH_Calcpad
-├─ Dependencies                         // Framework dependencies and Calcpad integration
-│  ├─ Assemblies
-│     ├─ Calcpad.dll                   // Core Calcpad calculation engine
-│     ├─ Calcpad.Core.dll              // Core functionality and settings
-│     ├─ PyCalcpad.dll                 // Python wrapper for Calcpad integration
-│     └─ [Additional assemblies...]
-│  ├─ Packages
-│     └─ [NuGet packages and dependencies...]
-├─ Properties
-│  ├─ launchSettings.json
-│  └─ Resources.resx                    // Resource management
-│     └─ Resources.Designer.cs
-├─ Classes
-│  ├─ CalcpadSheet.cs                  // Core wrapper class for Calcpad calculations
-│  ├─ CalcpadEngine.cs                 // Optimized calculation engine
-│  └─ OptimizationResult.cs            // Data structure for optimization history
-├─ Components                          // Complete component ecosystem
-│  ├─ GH_Calcpad_Info.cs              // ✅ Plugin and version information display
-│  ├─ GH_Calcpad_Load_cpd.cs          // ✅ Loads .cpd files (source format)
-│  ├─ GH_Calcpad_Load_cpdz.cs         // ✅ Loads .cpdz files (compiled format)
-│  ├─ GH_Calcpad_Play.cs              // ✅ Executes calculations with variable modification
-│  ├─ GH_Calcpad_Search_Variables.cs  // ✅ Variable filtering and modification (pre-calculation)
-│  ├─ GH_Calcpad_Search_Results.cs    // ✅ Result filtering (post-calculation)
-│  ├─ GH_Calcpad_Export_pdf.cs        // ✅ High-quality PDF report generation
-│  ├─ GH_Calcpad_Export_word.cs       // ✅ Editable Word document export
-│  ├─ GH_Calcpad_Save_cpd.cs          // ✅ Save modified CPD files
-│  ├─ GH_Calcpad_Optimizer.cs         // 🚀 REVOLUTIONARY: AI-powered optimization component
-│  └─ GH_Calcpad_Help.cs              // ✅ Interactive help and workflow guidance
-├─ Libraries
-│  ├─ Parser.cs                       // PyCalcpad parser integration
-│  └─ [Additional library wrappers...]
-├─ Resources                          // Complete icon set for all components
-│  ├─ GH_Calcpad.ico                  // Project icon
-│  ├─ Icon_Calcpad.png                // H_Calcpad_Info.cs icon
-│  ├─ Icon_Calc.png                   // GH_Calcpad_Load_cpd.cs icon
-│  ├─ Icon_Form.png                   // GH_Calcpad_Load_cpdz.cs icon
-│  ├─ Icon_SearchV.png                // GH_Calcpad_Search_Variables.cs icon
-│  ├─ Icon_Next.png                   // GH_Calcpad_Optimizer.cs icon
-│  ├─ Icon_Play.png                   // GH_Calcpad_Play.cs icon
-│  ├─ Icon_SearchR.png                // GH_Calcpad_Search_Results.cs icon
-│  ├─ Icon_Pdf.png                    // GH_Calcpad_Export_pdf.cs icon
-│  ├─ Icon_Word.png                   // GH_Calcpad_Export_word.cs icon
-│  └─ Icon_Help.png                   // GH_Calcpad_Help.cs icon
-├─ Documents                          // Complete documentation system
-│  ├─ 01_GH-Calcpad_Architecture.txt  // This file - project architecture
-│  ├─ 02_GH-Calcpad_Components.txt    // Detailed component specifications
-│  └─ 03_GH-Calcpad_Optimizer.txt     // Revolutionary optimizer documentation
-└─ GH_CalcpadInfo.cs                  // Assembly information class
+📋 Information & Diagnostics
+   └── Info
 
-3. COMPONENT ORGANIZATION:
-=================================
+📁 File Loading  
+   ├── Load CPD
+   └── Load CPDz // pending development
 
-📋 1. INFORMATION & DIAGNOSTICS:
-- GH_Calcpad_Info.cs: System diagnostics and version information
+🔧 Variable Modification
+   └── Search Variables
 
-📁 2. FILE LOADING:
-- GH_Calcpad_Load_cpd.cs: Source file loader with variable extraction
-- GH_Calcpad_Load_cpdz.cs: Compiled file loader with protection support // aún no inplementado
+⚡ Execution & Optimization
+   ├── Play CPD
+   └── Optimizer
 
-🔧 3. VARIABLE MODIFICATION:
-- GH_Calcpad_Search.cs: Pre-calculation variable modification (maintains structure)
+🔍 Result Filtering
+   └── Search Results
 
-⚡ 4. EXECUTION & OPTIMIZATION:
-- GH_Calcpad_Play.cs: Main calculation engine with variable override
-- GH_Calcpad_Optimizer.cs: 🚀 AI-powered optimization with auto-detection
+💾 Saving & Export
+   ├── Save CPD
+   ├── Export HTML
+   ├── Export PDF
+   └── Export Word
 
-🔍 5. RESULT FILTERING:
-- GH_Calcpad_Filter_Results.cs: Post-calculation result filtering (focused extraction)
+❓ Help & Support
+   └── Help
 
-💾 6. SAVING & EXPORT:
-- GH_Calcpad_Save_cpd.cs: Modified file saver with version control
-- GH_Calcpad_Export_pdf.cs: Vector PDF generation
-- GH_Calcpad_Export_word.cs: Editable DOCX creation
-
-❓ 7. HELP & SUPPORT:
-- GH_Calcpad_Help.cs: Interactive workflow guidance
-
-4. REVOLUTIONARY WORKFLOWS:
-===========================
+3. CORE WORKFLOWS:
+==================
 
 BASIC WORKFLOW:
---------------
 Load CPD → Play → Export
-    ↓       ↓       ↓
-Variables → Results → Reports
+Variables → Calculate → Reports
+
+VARIABLE MODIFICATION WORKFLOW:
+Load CPD → Search Variables → Play → Export
+Variables → Custom Values → Calculate → Reports
+
+OPTIMIZATION WORKFLOW:
+Load CPD → Optimizer → Galapagos → Save/Export
+Variables → Auto-detection → Genetic Algorithm → Documentation
 
 ADVANCED WORKFLOW:
------------------
-Load CPD → Modify Variables → Play → Filter Results → Export
-    ↓          ↓                ↓         ↓            ↓
-Variables → Custom Values → Calculate → Specific → Professional Reports
+Load CPD → Search Variables → Play → Search Results → Export
+Variables → Custom Values → Calculate → Specific Results → Professional Output
 
-OPTIMIZATION WORKFLOW (REVOLUTIONARY):
--------------------------------------
-Load CPD → Auto-Optimizer → Galapagos → Best Solution → Save/Export
-    ↓           ↓              ↓           ↓             ↓
-Variables → AI Detection → Genetic Alg → Optimized → Documentation
-
-PARAMETRIC STUDY WORKFLOW:
--------------------------
-Load CPD → Series/Range → Play → Filter → Analysis
-    ↓          ↓           ↓       ↓        ↓
-Base → Parameter Sets → Results → Focus → Insights
-
-5. CORE INNOVATIONS:
-===================
-
-AI-POWERED AUTO-OPTIMIZATION:
------------------------------
-- Automatic detection of design variables using pattern recognition
-- Intelligent objective identification from calculation results
-- Multi-objective optimization with automatic weighting
-- Convergence analysis with real-time progress monitoring
-- Cache system for 5-10x performance improvement in optimization
-
-INTELLIGENT CACHING SYSTEM:
----------------------------
-- Hash-based caching prevents redundant calculations
-- Massive performance gains for optimization algorithms
-- Memory-efficient storage of unique variable combinations
-- Perfect for genetic algorithms with thousands of evaluations
-
-SEAMLESS INTEGRATION:
---------------------
-- Native Galapagos/Octopus compatibility
-- One-click optimization setup (zero manual configuration)
-- Multi-objective optimization out-of-the-box
-- Professional report generation integrated
-
-COMPLETE WORKFLOW AUTOMATION:
-----------------------------
-- File loading with automatic variable extraction
-- Variable modification with structure preservation
-- Calculation execution with error handling
-- Result filtering with intelligent selection
-- Report generation with professional formatting
-- File saving with version management
-
-6. PERFORMANCE BENCHMARKS:
-==========================
-
-TRADITIONAL OPTIMIZATION SETUP:
--------------------------------
-- Manual configuration time: 30+ minutes
-- Variable detection: Manual identification required
-- Objective setup: Manual function creation needed
-- 1000 evaluations: 10+ minutes execution time
-- Error rate: High (manual configuration errors)
-- Multi-objective: Complex manual setup required
-
-GH_CALCPAD_OPTIMIZER PERFORMANCE:
---------------------------------
-- Auto-configuration time: 30 seconds (connect and run)
-- Variable detection: Automatic AI-powered identification
-- Objective setup: Automatic pattern recognition
-- 1000 evaluations: 2 minutes execution time (with intelligent cache)
-- Error rate: Minimal (automatic validation and error handling)
-- Multi-objective: Native support with automatic weighting
-
-SPEED IMPROVEMENTS:
-------------------
-- Setup time: 60x faster (30 min → 30 sec)
-- Execution time: 5x faster (cache system)
-- Error reduction: 90% fewer user errors
-- Workflow efficiency: 10x overall improvement
-
-7. TARGET FRAMEWORK COMPATIBILITY:
-==================================
+4. TECHNICAL SPECIFICATIONS:
+============================
 
 FRAMEWORK: .NET Framework 4.8
-- Full compatibility with Grasshopper/Rhino ecosystem
-- Optimized for Windows development environment
-- Support for all Grasshopper data types and structures
-- Compatible with existing Grasshopper plugins and tools
+- Grasshopper/Rhino ecosystem compatibility
+- Windows development environment optimized
 
 DEPENDENCIES:
 - Calcpad.Core.dll: Core calculation engine
 - PyCalcpad.dll: Python integration wrapper
-- Grasshopper.dll: Grasshopper framework
-- RhinoCommon.dll: Rhino integration
+- Standard Grasshopper/RhinoCommon libraries
 
-8. USE CASES AND APPLICATIONS:
-==============================
+5. APPLICATION AREAS:
+====================
 
 STRUCTURAL ENGINEERING:
------------------------
-- Beam optimization (minimize weight + deflection)
-- Column design (minimize cost + maximize safety factor)
-- Truss optimization (minimize material + stress constraints)
-- Foundation design (minimize concrete + maximize bearing capacity)
+- Beam and column optimization
+- Truss design and analysis
+- Foundation calculations
 
 MECHANICAL DESIGN:
------------------
-- Gear design optimization (minimize wear + maximize torque)
-- Shaft sizing (minimize weight + stress constraints)
-- Spring design (target force + minimize material)
-- Heat exchanger optimization (maximize efficiency + minimize cost)
+- Component sizing and optimization
+- Material selection and analysis
+- Performance optimization
 
 ARCHITECTURAL APPLICATIONS:
---------------------------
-- Building envelope optimization (minimize energy + cost)
-- Structural member sizing (minimize weight + deflection)
-- HVAC system optimization (minimize energy + maximize comfort)
-- Daylighting optimization (maximize natural light + minimize glare)
+- Building envelope optimization
+- Energy efficiency calculations
+- Structural member sizing
 
-RESEARCH AND EDUCATION:
-----------------------
-- Multi-parameter sensitivity analysis
-- Design space exploration and visualization
-- Pareto frontier generation and analysis
-- Optimization algorithm comparison and benchmarking
-- Teaching tool for computational design concepts
+=====================
+This implementation provides a comprehensive Calcpad integration for Grasshopper, enabling computational design and engineering optimization workflows.
 
-9. FUTURE DEVELOPMENT ROADMAP:
-==============================
-
-IMMEDIATE ENHANCEMENTS:
-----------------------
-- Machine learning integration for smarter variable detection
-- Cloud-based optimization for massive computational problems
-- Real-time collaboration features for team optimization
-- Advanced visualization of optimization progress
-
-ADVANCED FEATURES:
------------------
-- Genetic programming for automatic objective function creation
-- Multi-physics optimization support
-- Topology optimization integration
-- AI-powered design rule learning and application
-
-ECOSYSTEM EXPANSION:
--------------------
-- Direct integration with popular optimization tools
-- Custom optimization algorithm plugins
-- Advanced post-processing and visualization tools
-- Industry-specific optimization templates
-
-10. CONCLUSION:
-==============
-
-GH_Calcpad represents a revolutionary advancement in computational design optimization within the Grasshopper ecosystem. By combining the powerful calculation capabilities of Calcpad with innovative AI-powered optimization features, intelligent caching systems, and complete workflow automation, it transforms complex optimization tasks into simple "connect and optimize" operations.
-
-The plugin's unique combination of automatic variable detection, multi-objective optimization, and professional report generation makes it accessible to beginners while providing the advanced features required by optimization experts and researchers.
-
-Key achievements:
-- 60x faster optimization setup (30 min → 30 sec)
-- 5x faster execution through intelligent caching
-- Zero-configuration optimization for typical scenarios
-- Professional-quality automated report generation
-- Revolutionary AI-powered variable and objective detection
-
-This innovation positions GH_Calcpad as the most advanced optimization-focused plugin in the Grasshopper ecosystem, enabling new possibilities for computational design, engineering optimization, and research applications that were previously impossible or impractical.
-
-PROJECT STATUS: ✅ COMPLETE IMPLEMENTATION
-All core components have been successfully developed and integrated, creating a comprehensive ecosystem for Calcpad integration within Grasshopper, with revolutionary optimization capabilities that set new standards for computational design tools.
-
-TOTAL COMPONENTS: 11 components organized in 7 logical workflow blocks
+TOTAL COMPONENTS: 12 organized in 6 logical workflow categories

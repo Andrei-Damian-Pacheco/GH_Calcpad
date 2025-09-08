@@ -5,14 +5,6 @@ VisualStudioVersion = 17.14.36221.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GH_Calcpad", "GH_Calcpad\GH_Calcpad.csproj", "{102C2385-8741-475D-988E-2FBF19688DDD}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GH_Calcpad_Examples", "GH_Calcpad_Examples", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_01.cpd = ..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_01.cpd
-		..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_01.gh = ..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_01.gh
-		..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_02.cpd = ..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_02.cpd
-		..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_02.gh = ..\..\..\03 PROYECTOS\00 Me\Calcpad\CPD\For Examples\EJM\Example_Read_02.gh
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

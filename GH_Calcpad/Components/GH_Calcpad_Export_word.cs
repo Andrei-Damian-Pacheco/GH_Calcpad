@@ -47,7 +47,7 @@ namespace GH_Calcpad.Components
 
             if (!execute)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Pon Execute=True para exportar Word");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Set Execute=True to export Word");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -55,14 +55,14 @@ namespace GH_Calcpad.Components
 
             if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'Output Folder'. No se exporta hasta tener ruta.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'Output Folder'. No export until path is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
             }
             if (string.IsNullOrWhiteSpace(fileName))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'File'. No se exporta hasta tener nombre.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'File'. No export until name is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -76,22 +76,22 @@ namespace GH_Calcpad.Components
             }
             if (string.IsNullOrWhiteSpace(sheet.OriginalCode))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No code to export. Ejecuta 'Play CPD' antes.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No code to export. Run 'Play CPD' first.");
                 return;
             }
 
-            // 1) Intentar CLI (resultado idéntico a Calcpad)
+            // 1) Try CLI (identical result to Calcpad)
             var res = CalcpadExporter.ExportDocxCli(
                 sheet,
                 outputFolder,
                 fileName.Trim(),
-                cliPath: null, // usa autodetección (o pasa una ruta aquí)
+                cliPath: null, // use autodetection (or pass a path here)
                 msg => AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, msg));
 
-            // 2) Fallback a Interop si la CLI no está disponible
+            // 2) Fallback to Interop if CLI is not available
             if (!res.success)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "CLI no disponible o falló. Intentando Word Interop…");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "CLI not available or failed. Trying Word Interop…");
                 res = CalcpadExporter.ExportDocxInterop(
                     sheet,
                     outputFolder,
@@ -107,7 +107,7 @@ namespace GH_Calcpad.Components
                     $"✅ DOCX export → {Path.GetFileName(res.finalPath)} | {res.size / 1024.0:F1} KB | {res.method}");
             else
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    "❌ DOCX export failed. Configura la CLI de Calcpad o revisa el Interop de Word.");
+                    "❌ DOCX export failed. Configure Calcpad CLI or check Word Interop.");
         }
 
         public override Guid ComponentGuid => new Guid("C3F2D4E5-F6A7-4B8C-9D0E-1F2A3B4C5D6F");

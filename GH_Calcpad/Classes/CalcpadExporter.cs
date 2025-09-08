@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Diagnostics; // <-- añadido
+using System.Diagnostics; // Added
 using PyCalcpad;
 
 namespace GH_Calcpad.Classes
@@ -13,7 +13,7 @@ namespace GH_Calcpad.Classes
 
     public static class CalcpadExporter
     {
-        // Resolver para asegurar DocumentFormat.OpenXml 3.3.0 desde la carpeta del plugin
+        // Resolver to ensure DocumentFormat.OpenXml 3.3.0 is loaded from the plugin folder
         static CalcpadExporter()
         {
             AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
@@ -21,7 +21,7 @@ namespace GH_Calcpad.Classes
                 try
                 {
                     var name = new AssemblyName(args.Name);
-                    // Solo intervenimos para OpenXml (y potencialmente otras dependencias si hiciera falta)
+                    // Intervene only for OpenXml (and potentially other dependencies if needed)
                     if (!name.Name.Equals("DocumentFormat.OpenXml", StringComparison.OrdinalIgnoreCase))
                         return null;
 
@@ -30,7 +30,7 @@ namespace GH_Calcpad.Classes
                     if (File.Exists(candidate))
                         return Assembly.LoadFrom(candidate);
 
-                    // Intento adicional: misma carpeta que el ensamblado actual
+                    // Additional attempt: same folder as current assembly
                     var here = Path.GetDirectoryName(typeof(CalcpadExporter).Assembly.Location);
                     if (!string.IsNullOrEmpty(here))
                     {
@@ -39,13 +39,13 @@ namespace GH_Calcpad.Classes
                             return Assembly.LoadFrom(candidate);
                     }
                 }
-                catch { /* ignorar */ }
+                catch { /* ignore */ }
 
-                return null; // que siga la resolución normal
+                return null; // allow normal resolution
             };
         }
 
-        // ========== API pública unificada ==========
+        // ========== Unified public API ==========
 
         public static (bool success, string finalPath, long size, string method) ExportPdfNative(
             CalcpadSheet sheet, string outputFolder, string baseName, Action<string> log = null)
@@ -55,12 +55,12 @@ namespace GH_Calcpad.Classes
             CalcpadSheet sheet, string outputFolder, string baseName, Action<string> log = null)
             => ExportViaConvert(sheet, outputFolder, baseName, ".html", log);
 
-        // DOCX nativo (si Convert soporta .docx en tu build)
+        // Native DOCX (if Convert supports .docx in this build)
         public static (bool success, string finalPath, long size, string method) ExportDocxNative(
             CalcpadSheet sheet, string outputFolder, string baseName, Action<string> log = null)
             => ExportViaConvert(sheet, outputFolder, baseName, ".docx", log);
 
-        // DOCX vía Interop de Word (late-binding) + OMath
+        // DOCX via Word Interop (late-binding) + OMath
         public static (bool success, string finalPath, long size, string method) ExportDocxInterop(
             CalcpadSheet sheet, string outputFolder, string baseName, Action<string> log = null)
         {
@@ -69,12 +69,12 @@ namespace GH_Calcpad.Classes
 
             if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                log?.Invoke("No se ha proporcionado 'Output Folder'. Exportación cancelada.");
+                log?.Invoke("'Output Folder' not provided. Export cancelled.");
                 return (false, null, 0, "NoOutputFolder");
             }
             if (string.IsNullOrWhiteSpace(baseName))
             {
-                log?.Invoke("No se ha proporcionado 'File'. Exportación cancelada.");
+                log?.Invoke("'File' name not provided. Export cancelled.");
                 return (false, null, 0, "NoFileName");
             }
 
@@ -85,12 +85,12 @@ namespace GH_Calcpad.Classes
                 if (!Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
-                    log?.Invoke($"Directorio creado: {folder}");
+                    log?.Invoke($"Directory created: {folder}");
                 }
             }
             catch (Exception ex)
             {
-                log?.Invoke($"No se pudo crear el directorio: {ex.Message}");
+                log?.Invoke($"Could not create directory: {ex.Message}");
                 return (false, null, 0, "DirError");
             }
 
@@ -103,7 +103,7 @@ namespace GH_Calcpad.Classes
                 : (false, docxPath, 0, "InteropFailed");
         }
 
-        // DOCX vía Calcpad CLI (OpenXml nativo fuera de proceso)
+        // DOCX via Calcpad CLI (native OpenXml out-of-process)
         public static (bool success, string finalPath, long size, string method) ExportDocxCli(
             CalcpadSheet sheet, string outputFolder, string baseName, string cliPath = null, Action<string> log = null)
         {
@@ -112,12 +112,12 @@ namespace GH_Calcpad.Classes
 
             if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                log?.Invoke("No se ha proporcionado 'Output Folder'. Exportación cancelada.");
+                log?.Invoke("'Output Folder' not provided. Export cancelled.");
                 return (false, null, 0, "NoOutputFolder");
             }
             if (string.IsNullOrWhiteSpace(baseName))
             {
-                log?.Invoke("No se ha proporcionado 'File'. Exportación cancelada.");
+                log?.Invoke("'File' name not provided. Export cancelled.");
                 return (false, null, 0, "NoFileName");
             }
 
@@ -127,44 +127,44 @@ namespace GH_Calcpad.Classes
                 if (!Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
-                    log?.Invoke($"Directorio creado: {folder}");
+                    log?.Invoke($"Directory created: {folder}");
                 }
             }
             catch (Exception ex)
             {
-                log?.Invoke($"No se pudo crear el directorio: {ex.Message}");
+                log?.Invoke($"Could not create directory: {ex.Message}");
                 return (false, null, 0, "DirError");
             }
 
             string safeBase = Path.GetFileNameWithoutExtension(baseName.Trim());
             string docxPath = Path.Combine(folder, safeBase + ".docx");
 
-            // Escribir CPD temporal
+            // Write temporary CPD
             string tmpCpd = Path.Combine(Path.GetTempPath(), $"calcpad_{DateTime.Now.Ticks}.cpd");
             try { File.WriteAllText(tmpCpd, sheet.OriginalCode, new UTF8Encoding(false)); }
             catch (Exception ex)
             {
-                log?.Invoke($"No se pudo escribir CPD temporal: {ex.Message}");
+                log?.Invoke($"Could not write temporary CPD: {ex.Message}");
                 return (false, docxPath, 0, "TmpWriteFailed");
             }
 
-            // Localizar CLI
+            // Locate CLI
             string exe = ResolveCalcpadCliPath(cliPath, log);
             if (string.IsNullOrEmpty(exe) || !File.Exists(exe))
             {
-                log?.Invoke("Calcpad.Cli no encontrado. Define variable CALCPAD_CLI o indica ruta.");
+                log?.Invoke("Calcpad.Cli not found. Define CALCPAD_CLI environment variable or provide a path.");
                 TryDelete(tmpCpd);
                 return (false, docxPath, 0, "CliNotFound");
             }
 
-            // Intentar varios patrones de argumentos comunes
+            // Try several common argument patterns
             var candidates = new[]
             {
-                // 1) estilo simple: Calcpad.Cli.exe "in.cpd" "out.docx"
+                // 1) simple style: Calcpad.Cli.exe "in.cpd" "out.docx"
                 $"\"{tmpCpd}\" \"{docxPath}\"",
-                // 2) estilo con comando: Calcpad.Cli.exe convert "in.cpd" "out.docx"
+                // 2) with command: Calcpad.Cli.exe convert "in.cpd" "out.docx"
                 $"convert \"{tmpCpd}\" \"{docxPath}\"",
-                // 3) estilo con flags
+                // 3) with flags
                 $"-i \"{tmpCpd}\" -o \"{docxPath}\" -f docx"
             };
 
@@ -173,7 +173,7 @@ namespace GH_Calcpad.Classes
 
             foreach (var args in candidates)
             {
-                log?.Invoke($"Ejecutando CLI: {Path.GetFileName(exe)} {args}");
+                log?.Invoke($"Running CLI: {Path.GetFileName(exe)} {args}");
                 var (runOk, err) = RunProcess(exe, args, log, timeoutMs: 60000);
                 lastErr = err;
                 if (runOk && File.Exists(docxPath))
@@ -191,11 +191,11 @@ namespace GH_Calcpad.Classes
                 return (true, docxPath, size, "Calcpad CLI");
             }
 
-            log?.Invoke($"CLI no generó DOCX. {(string.IsNullOrWhiteSpace(lastErr) ? "" : $"Detalle: {lastErr}")}");
+            log?.Invoke($"CLI did not generate DOCX. {(string.IsNullOrWhiteSpace(lastErr) ? "" : $"Details: {lastErr}")}");
             return (false, docxPath, 0, "CliFailed");
         }
 
-        // ========== Implementaciones internas ==========
+        // ========== Internal implementations ==========
 
         private static (bool success, string finalPath, long size, string method) ExportViaConvert(
             CalcpadSheet sheet, string outputFolder, string baseName, string extension, Action<string> log)
@@ -205,12 +205,12 @@ namespace GH_Calcpad.Classes
 
             if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                log?.Invoke("No se ha proporcionado 'Output Folder'. Exportación cancelada.");
+                log?.Invoke("'Output Folder' not provided. Export cancelled.");
                 return (false, null, 0, "NoOutputFolder");
             }
             if (string.IsNullOrWhiteSpace(baseName))
             {
-                log?.Invoke("No se ha proporcionado 'File'. Exportación cancelada.");
+                log?.Invoke("'File' name not provided. Export cancelled.");
                 return (false, null, 0, "NoFileName");
             }
 
@@ -221,12 +221,12 @@ namespace GH_Calcpad.Classes
                 if (!Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
-                    log?.Invoke($"Directorio creado: {folder}");
+                    log?.Invoke($"Directory created: {folder}");
                 }
             }
             catch (Exception ex)
             {
-                log?.Invoke($"No se pudo crear el directorio: {ex.Message}");
+                log?.Invoke($"Could not create directory: {ex.Message}");
                 return (false, null, 0, "DirError");
             }
 
@@ -252,17 +252,17 @@ namespace GH_Calcpad.Classes
             catch (Exception ex)
             {
                 try { File.Delete(tmpCpd); } catch { }
-                // Mejoramos el detalle de error (InnerException si viene por reflexión)
+                // Improve error detail (InnerException if coming from reflection)
                 string msg = (ex is TargetInvocationException tie && tie.InnerException != null)
                     ? $"{tie.InnerException.GetType().Name}: {tie.InnerException.Message}"
                     : ex.Message;
 
-                log?.Invoke($"Fallo en Convert nativo: {msg}");
+                log?.Invoke($"Native Convert failure: {msg}");
                 return (false, finalPath, 0, "Exception");
             }
         }
 
-        // Interop Word en STA con OMaths.BuildUp
+        // Word Interop in STA with OMaths.BuildUp
         private static (bool success, long size) BuildDocxWithOMathSTA(CalcpadSheet sheet, string docxPath, Action<string> log)
         {
             bool success = false;
@@ -277,7 +277,7 @@ namespace GH_Calcpad.Classes
                     var wordType = Type.GetTypeFromProgID("Word.Application");
                     if (wordType == null)
                     {
-                        log?.Invoke("Microsoft Word no está instalado (ProgID 'Word.Application' ausente).");
+                        log?.Invoke("Microsoft Word is not installed (ProgID 'Word.Application' missing).");
                         return;
                     }
 
@@ -287,10 +287,10 @@ namespace GH_Calcpad.Classes
                     docs = wordType.InvokeMember("Documents", BindingFlags.GetProperty, null, wordApp, null);
                     doc = docs.GetType().InvokeMember("Add", BindingFlags.InvokeMethod, null, docs, null);
 
-                    // Título
+                    // Title
                     AppendParagraph(doc, $"Calcpad Report - {DateTime.Now:yyyy-MM-dd HH:mm:ss}", bold: true, fontName: "Times New Roman", fontSizePt: 14f);
 
-                    // Ecuaciones de resultado
+                    // Result equations
                     var eqs = sheet.GetResultEquations();
                     var lhsSet = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     if (eqs != null)
@@ -302,7 +302,7 @@ namespace GH_Calcpad.Classes
 
                     var addedLhs = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                    // Recorrido del código
+                    // Source code traversal
                     var lines = sheet.OriginalCode.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
                     foreach (var raw in lines)
                     {
@@ -326,11 +326,11 @@ namespace GH_Calcpad.Classes
                         AppendParagraph(doc, line, fontName: "Times New Roman", fontSizePt: 12f);
                     }
 
-                    // Bloque de resultados
+                    // Results block
                     if (eqs != null && eqs.Count > 0)
                     {
                         AppendEmptyParagraph(doc);
-                        AppendParagraph(doc, "Resultados", bold: true, fontName: "Times New Roman", fontSizePt: 12f);
+                        AppendParagraph(doc, "Results", bold: true, fontName: "Times New Roman", fontSizePt: 12f);
 
                         foreach (var eq in eqs)
                         {
@@ -340,7 +340,7 @@ namespace GH_Calcpad.Classes
                         }
                     }
 
-                    // Guardar
+                    // Save
                     doc.GetType().InvokeMember("SaveAs2", BindingFlags.InvokeMethod, null, doc, new object[] { docxPath, 12 });
                     doc.GetType().InvokeMember("Close", BindingFlags.InvokeMethod, null, doc, new object[] { false });
                     wordType.InvokeMember("Quit", BindingFlags.InvokeMethod, null, wordApp, null);
@@ -378,7 +378,7 @@ namespace GH_Calcpad.Classes
             return (success, size);
         }
 
-        // ===== Helpers Interop / texto =====
+        // ===== Interop / text helpers =====
 
         private static object GetEndRange(object doc)
         {
@@ -388,7 +388,7 @@ namespace GH_Calcpad.Classes
             return endRange;
         }
 
-        // Inserta un párrafo de texto al final (vía Paragraphs.Add)
+        // Inserts a paragraph of text at the end (via Paragraphs.Add)
         private static void AppendParagraph(object doc, string text, bool bold = false, bool italic = false, string fontName = "Times New Roman", float fontSizePt = 12f)
         {
             var paragraphs = doc.GetType().InvokeMember("Paragraphs", BindingFlags.GetProperty, null, doc, null);
@@ -403,7 +403,7 @@ namespace GH_Calcpad.Classes
             font.GetType().InvokeMember("Bold", BindingFlags.SetProperty, null, font, new object[] { bold ? 1 : 0 });
             font.GetType().InvokeMember("Italic", BindingFlags.SetProperty, null, font, new object[] { italic ? 1 : 0 });
 
-            // Asegura un salto de párrafo
+            // Ensure paragraph break
             range.GetType().InvokeMember("InsertParagraphAfter", BindingFlags.InvokeMethod, null, range, null);
         }
 
@@ -413,7 +413,7 @@ namespace GH_Calcpad.Classes
             paragraphs.GetType().InvokeMember("Add", BindingFlags.InvokeMethod, null, paragraphs, null);
         }
 
-        // Convierte una ecuación en OMath sin incluir el CR del párrafo en el rango (clave para evitar 'out of range')
+        // Converts an equation into OMath without including the paragraph CR in the range (avoid 'out of range')
         private static void AppendEquation(object doc, string linearEq)
         {
             string eq = SanitizeForOMath(linearEq);
@@ -427,38 +427,38 @@ namespace GH_Calcpad.Classes
             var par = paragraphs.GetType().InvokeMember("Add", BindingFlags.InvokeMethod, null, paragraphs, null);
             var parRange = par.GetType().InvokeMember("Range", BindingFlags.GetProperty, null, par, null);
 
-            // Escribe la ecuación en el párrafo
+            // Write equation text
             parRange.GetType().InvokeMember("Text", BindingFlags.SetProperty, null, parRange, new object[] { eq });
 
-            // Calcula un rango SIN la marca de párrafo final
+            // Compute a range excluding trailing paragraph mark
             int start = (int)parRange.GetType().InvokeMember("Start", BindingFlags.GetProperty, null, parRange, null);
             int end = (int)parRange.GetType().InvokeMember("End", BindingFlags.GetProperty, null, parRange, null);
-            if (end > start) end -= 1; // excluye el CR
+            if (end > start) end -= 1; // exclude CR
 
             var eqRange = doc.GetType().InvokeMember("Range", BindingFlags.InvokeMethod, null, doc, new object[] { start, end });
 
             try
             {
-                // Fuente matemática
+                // Math font
                 var font = eqRange.GetType().InvokeMember("Font", BindingFlags.GetProperty, null, eqRange, null);
                 font.GetType().InvokeMember("Name", BindingFlags.SetProperty, null, font, new object[] { "Cambria Math" });
                 font.GetType().InvokeMember("Size", BindingFlags.SetProperty, null, font, new object[] { 12f });
 
-                // Convertir a OMath
+                // Convert to OMath
                 var omaths = eqRange.GetType().InvokeMember("OMaths", BindingFlags.GetProperty, null, eqRange, null);
                 omaths.GetType().InvokeMember("Add", BindingFlags.InvokeMethod, null, omaths, new object[] { eqRange });
                 omaths.GetType().InvokeMember("BuildUp", BindingFlags.InvokeMethod, null, omaths, null);
             }
             catch
             {
-                // Fallback: deja texto normal si OMath falla por alguna ecuación
+                // Fallback: leave as plain text if OMath conversion fails
                 var f = eqRange.GetType().InvokeMember("Font", BindingFlags.GetProperty, null, eqRange, null);
                 f.GetType().InvokeMember("Name", BindingFlags.SetProperty, null, f, new object[] { "Times New Roman" });
                 f.GetType().InvokeMember("Size", BindingFlags.SetProperty, null, f, new object[] { 12f });
             }
             finally
             {
-                // Asegura salto de párrafo tras la ecuación
+                // Ensure paragraph break
                 eqRange.GetType().InvokeMember("InsertParagraphAfter", BindingFlags.InvokeMethod, null, eqRange, null);
             }
         }
@@ -468,18 +468,18 @@ namespace GH_Calcpad.Classes
             if (string.IsNullOrEmpty(s)) return s;
             var t = s;
 
-            // Espacios invisibles a espacio normal
+            // Invisible spaces to normal space
             t = t.Replace('\u2009', ' ').Replace('\u200A', ' ').Replace('\u202F', ' ')
                  .Replace('\u00A0', ' ').Replace('\u2002', ' ').Replace('\u2003', ' ')
                  .Replace('\u2005', ' ').Replace('\u2006', ' ');
 
-            // Operadores comunes
+            // Common operators
             t = t.Replace('·', '*').Replace('×', '*');
 
-            // Potencias y raíces simples
+            // Simple powers / roots
             t = t.Replace("²", "^2").Replace("³", "^3").Replace("√", "sqrt ");
 
-            // Limpieza final
+            // Final trim
             t = t.Trim();
             return t;
         }
@@ -526,14 +526,14 @@ namespace GH_Calcpad.Classes
 
         private static string ResolveCalcpadCliPath(string cliPath, Action<string> log)
         {
-            // 1) Sugerida por parámetro
+            // 1) Provided path
             if (!string.IsNullOrWhiteSpace(cliPath) && File.Exists(cliPath)) return cliPath;
 
-            // 2) Variable de entorno
+            // 2) Environment variable
             var env = Environment.GetEnvironmentVariable("CALCPAD_CLI");
             if (!string.IsNullOrWhiteSpace(env) && File.Exists(env)) return env;
 
-            // 3) Junto al plugin
+            // 3) Next to plugin
             var here = Path.GetDirectoryName(typeof(CalcpadExporter).Assembly.Location);
             if (!string.IsNullOrEmpty(here))
             {
@@ -541,7 +541,7 @@ namespace GH_Calcpad.Classes
                 if (File.Exists(local)) return local;
             }
 
-            // 4) Programa instalado (heurística)
+            // 4) Installed program (heuristic)
             var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             var guess = Path.Combine(pf, "Calcpad", "Calcpad.Cli.exe");
             if (File.Exists(guess)) return guess;
@@ -571,14 +571,14 @@ namespace GH_Calcpad.Classes
                     p.OutputDataReceived += (s, e) => { if (e.Data != null) sbOut.AppendLine(e.Data); };
                     p.ErrorDataReceived += (s, e) => { if (e.Data != null) sbErr.AppendLine(e.Data); };
 
-                    if (!p.Start()) return (false, "No se pudo iniciar el proceso CLI.");
+                    if (!p.Start()) return (false, "Could not start CLI process.");
                     p.BeginOutputReadLine();
                     p.BeginErrorReadLine();
 
                     if (!p.WaitForExit(timeoutMs))
                     {
                         try { p.Kill(); } catch { }
-                        return (false, "Timeout ejecutando CLI.");
+                        return (false, "CLI execution timeout.");
                     }
 
                     string allOut = sbOut.ToString().Trim();

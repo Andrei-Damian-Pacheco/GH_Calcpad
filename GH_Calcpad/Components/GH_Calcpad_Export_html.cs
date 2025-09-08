@@ -9,7 +9,7 @@ using GH_Calcpad.Properties;
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// Exporta el reporte Calcpad a HTML usando el motor nativo (Parser.Convert).
+    /// Exports Calcpad report to HTML using the native engine (Parser.Convert).
     /// </summary>
     public class GH_Calcpad_Export_html : GH_Component
     {
@@ -75,7 +75,7 @@ namespace GH_Calcpad.Components
 
             if (!execute)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Pon Execute=True para exportar HTML");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Set Execute=True to export HTML");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -83,14 +83,14 @@ namespace GH_Calcpad.Components
 
             if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'Output Folder'. No se exporta hasta tener ruta.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'Output Folder'. No export until path is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
             }
             if (string.IsNullOrWhiteSpace(fileName))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'File'. No se exporta hasta tener nombre.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'File'. No export until name is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -105,7 +105,7 @@ namespace GH_Calcpad.Components
 
             if (string.IsNullOrWhiteSpace(sheet.OriginalCode))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No code to export. Ejecuta 'Play CPD' antes.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No code to export. Run 'Play CPD' first.");
                 return;
             }
 
@@ -126,7 +126,7 @@ namespace GH_Calcpad.Components
         }
 
         public override Guid ComponentGuid => new Guid("0D1D3B68-9D8B-4F6A-A23E-6F7EB07E2E7D");
-        protected override Bitmap Icon => Resources.Icon_Word;
+        protected override Bitmap Icon => Resources.Icon_Html;
         public override GH_Exposure Exposure => GH_Exposure.primary;
     }
 }

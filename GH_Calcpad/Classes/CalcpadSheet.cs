@@ -11,17 +11,18 @@ namespace GH_Calcpad.Classes
 {
     public class CalcpadSheet
     {
-        // Compatibilidad con Load
+        // Backward compatibility with legacy Load
         public List<string> Variables { get; }
         public List<double> Values { get; }
         public List<string> Units { get; }
 
-        // Estado
+        // State
         private string _originalCode;
         private Parser _parser;
         private Settings _settings;
         private string _lastHtmlResult;
 
+        // Character class for unit tokens (no digits)
         private const string UnitTokenClassNoDigits = "A-Za-z°µμΩ℧·/\\-\\^²³";
 
         public string OriginalCode => _originalCode ?? string.Empty;
@@ -83,7 +84,7 @@ namespace GH_Calcpad.Classes
             {
                 string vStr = value.ToString(CultureInfo.InvariantCulture);
 
-                // Reemplazo por bloque preservando "';'" y unidades
+                // Block-level replacement preserving "';'" separators and units
                 string pattern = @"(?m)(^|\s*';'\s*)\s*(?<lhs>" + Regex.Escape(name) + @")\s*=\s*(?<rhs>[^\r\n]*?)(?=(\s*';'\s*|$))";
 
                 bool replaced = false;
@@ -129,7 +130,7 @@ namespace GH_Calcpad.Classes
 
             try
             {
-                // Preprocesado opcional de aliases de unidades no soportadas por el parser
+                // Optional preprocessing for unsupported unit aliases
                 string codeToParse = PreprocessCode(_originalCode);
                 _lastHtmlResult = _parser.Parse(codeToParse);
             }
@@ -139,9 +140,9 @@ namespace GH_Calcpad.Classes
             }
         }
 
-        // ==================== Ecuaciones / Valores / Unidades ====================
+        // ==================== Equations / Values / Units ====================
 
-        // Independiente de LoadCPD True/False
+        // Independent from LoadCPD True/False
         public List<string> GetResultEquations()
         {
             var equations = new List<string>();
@@ -170,7 +171,7 @@ namespace GH_Calcpad.Classes
         public List<double> GetResultValues()
         {
             var results = new List<double>();
-            var vars = GetEquationVariableNamesFromCode(); // orden del código
+            var vars = GetEquationVariableNamesFromCode(); // order from source code
             if (vars.Count == 0) return results;
 
             string plain = ToPlainText(_lastHtmlResult);
@@ -192,7 +193,7 @@ namespace GH_Calcpad.Classes
             var vars = GetEquationVariableNamesFromCode();
             if (vars.Count == 0) return units;
 
-            // 1) HTML (reconstruye fracciones dvc/dvl)
+            // 1) From HTML (reconstruct fraction dvc/dvl)
             var htmlMap = ExtractResultBlocksByVarHtml(_lastHtmlResult, vars);
 
             foreach (var v in vars)
@@ -204,7 +205,7 @@ namespace GH_Calcpad.Classes
 
                 if (string.IsNullOrEmpty(u))
                 {
-                    // 2) Fallback: texto plano
+                    // 2) Fallback: plain text
                     string plain = ToPlainText(_lastHtmlResult);
                     var textMap = ExtractResultBlocksByVar(plain, vars);
                     if (textMap.TryGetValue(v, out var block))
@@ -216,39 +217,39 @@ namespace GH_Calcpad.Classes
             return units;
         }
 
-        // ==================== Reglas de detección ====================
+        // ==================== Detection rules ====================
 
-        // Ecuación “real” del código fuente (no asignaciones ni explícitos)
+        // “Real” equation in source (not simple assignments nor explicit value definitions)
         private bool IsEquationDefinition(string line)
         {
             if (string.IsNullOrWhiteSpace(line)) return false;
 
             int firstEq = line.IndexOf('=');
             if (firstEq < 0) return false;
-            if (line.Contains("';'")) return false;                  // múltiples asignaciones en la línea
-            if (line.IndexOf('=', firstEq + 1) >= 0) return false;   // más de un '='
+            if (line.Contains("';'")) return false;                  // multiple assignments in the same line
+            if (line.IndexOf('=', firstEq + 1) >= 0) return false;   // more than one '='
 
             string left = line.Substring(0, firstEq).Trim();
             string rightRaw = line.Substring(firstEq + 1).Trim();
             string right = RemoveInlineComments(rightRaw);
 
-            // LHS válido
+            // Valid LHS
             if (!Regex.IsMatch(left, @"^[a-zA-Z_][a-zA-Z0-9_'′,\.]*$")) return false;
 
-            // Dinámico: clase de caracteres de unidad desde calcpad.xml
+            // Character class for units (dynamic from calcpad.xml)
             string unitClass = CalcpadSyntax.Instance.UnitCharClass;
 
-            // Excluir RHS puramente numérico (+unidad)
+            // Exclude purely numeric RHS (+optional unit)
             var rxNumUnit = new Regex(@"^[+-]?\d+(?:\.\d+)?(?:\s*[" + unitClass + @"]+)?\s*$",
                               RegexOptions.CultureInvariant);
             if (rxNumUnit.IsMatch(right)) return false;
 
-            // Excluir explícitos ?{...}[unidad]
+            // Exclude explicit ?{...}[unit]
             var rxExplicit = new Regex(@"^\?\s*\{\s*[^}]+\s*\}\s*(?:[" + unitClass + @"]+)?\s*$",
                                RegexOptions.CultureInvariant);
             if (rxExplicit.IsMatch(right)) return false;
 
-            // Aceptar SOLO si hay operadores/funciones (verdaderas ecuaciones)
+            // Accept ONLY if operators / functions exist (true equation)
             bool hasOps = right.IndexOfAny(new[] { '+', '-', '*', '/', '^', '(', ')' }) >= 0
                || Regex.IsMatch(right, @"\b(sqrt|sin|cos|tan|log|exp|abs|min|max|pow)\b",
                                 RegexOptions.IgnoreCase);
@@ -280,7 +281,7 @@ namespace GH_Calcpad.Classes
             return names;
         }
 
-        // ==================== HTML/Text extractores ====================
+        // ==================== HTML / Text extractors ====================
 
         private string ToPlainText(string htmlOrText)
         {
@@ -310,7 +311,7 @@ namespace GH_Calcpad.Classes
         {
             if (string.IsNullOrEmpty(s)) return string.Empty;
 
-            // Espacios unicode → espacio normal
+            // Unicode spaces → normal space
             s = s.Replace('\u2009', ' ')
                  .Replace('\u200A', ' ')
                  .Replace('\u202F', ' ')
@@ -320,7 +321,7 @@ namespace GH_Calcpad.Classes
                  .Replace('\u2005', ' ')
                  .Replace('\u2006', ' ');
 
-            // '=' ancho completo → '=' ASCII
+            // Full-width '=' → ASCII '='
             s = s.Replace('\uFF1D', '=');
 
             s = s.Replace("\r\n", "\n").Replace("\r", "\n");
@@ -388,7 +389,7 @@ namespace GH_Calcpad.Classes
                 string tail = lastEq >= 0 ? block.Substring(lastEq + 1) : block;
                 tail = NormalizeSpacesAndTokens(tail).Trim();
 
-                // Científica real con ×
+                // Scientific notation with ×
                 var sci = Regex.Match(
                     tail,
                     @"^\s*([+-]?\d+(?:\.\d+)?)\s*×\s*10\^?([+-]?\d+)\b",
@@ -401,7 +402,7 @@ namespace GH_Calcpad.Classes
                     return a * Math.Pow(10, b);
                 }
 
-                // Decimal normal (anclado)
+                // Standard decimal
                 var num = Regex.Match(tail, @"^\s*([+-]?\d+(?:\.\d+)?)\b", RegexOptions.CultureInvariant);
                 if (num.Success)
                     return double.Parse(num.Groups[1].Value, CultureInfo.InvariantCulture);
@@ -411,7 +412,7 @@ namespace GH_Calcpad.Classes
             catch { return double.NaN; }
         }
 
-        // Reemplaza el método ExtractFinalUnitFromBlock por esta versión (sin dígitos en unidad)
+        // Extract unit from block (no digits in unit tokens)
         private string ExtractFinalUnitFromBlock(string block)
         {
             if (string.IsNullOrWhiteSpace(block)) return string.Empty;
@@ -422,7 +423,7 @@ namespace GH_Calcpad.Classes
                 string tail = lastEq >= 0 ? block.Substring(lastEq + 1) : block;
                 tail = NormalizeSpacesAndTokens(tail).Trim();
 
-                // número [× 10^exp] unidad(sin dígitos)
+                // number [× 10^exp] unit(no digits)
                 var m = Regex.Match(
                     tail,
                     @"^\s*[+-]?\d+(?:\.\d+)?(?:\s*×\s*10\^?[+-]?\d+)?\s*(?<u>[" + UnitTokenClassNoDigits + @"]+)\b",
@@ -481,7 +482,7 @@ namespace GH_Calcpad.Classes
                 var eqTailMatch = Regex.Match(spanHtml, @"=(?!.*=)([\s\S]*)</span>", RegexOptions.Singleline);
                 string tailHtml = eqTailMatch.Success ? eqTailMatch.Groups[1].Value : spanHtml;
 
-                // Fracción con dvc/dvl
+                // Fraction with dvc/dvl wrapper
                 var dvc = Regex.Match(tailHtml, @"<span\s+class=""dvc"">([\s\S]*?)</span>", RegexOptions.IgnoreCase);
                 if (dvc.Success)
                 {
@@ -506,7 +507,7 @@ namespace GH_Calcpad.Classes
                     }
                 }
 
-                // Unidad simple: último <i>…</i> del tail
+                // Simple unit: last <i>…</i> in tail
                 var lastI = Regex.Matches(tailHtml, @"<i>(.*?)</i>", RegexOptions.Singleline);
                 if (lastI.Count > 0)
                 {
@@ -519,7 +520,7 @@ namespace GH_Calcpad.Classes
             return string.Empty;
         }
 
-        // ==================== Utilidades ====================
+        // ==================== Utilities ====================
 
         public string GetDebugInfo()
         {
@@ -549,7 +550,7 @@ namespace GH_Calcpad.Classes
 
             rhs = NormalizeSpacesAndTokens(rhs).Trim();
 
-            // Corta en #, ' (no "';'"), ’, ‘
+            // Cut at #, ' (not "';'"), ', '
             var m = Regex.Match(
                 rhs,
                 @"^(?<code>.*?)(?:\s*(?:#|'(?!;)|\u2019|\u2018).*)?$",
@@ -576,20 +577,20 @@ namespace GH_Calcpad.Classes
             return s;
         }
 
-        // Reemplaza ExtractUnitSuffix por esta versión (sin dígitos en unidad)
+        // Extract unit suffix from RHS (no digits in unit tokens)
         private static string ExtractUnitSuffix(string rhs)
         {
             if (string.IsNullOrWhiteSpace(rhs)) return string.Empty;
             rhs = NormalizeSpaces(rhs).Trim();
 
-            // ?{...}[unidad]
+            // ?{...}[unit]
             var mExp = Regex.Match(rhs,
                 @"\?\s*\{[^}]*\}\s*(?<unit>[" + UnitTokenClassNoDigits + @"]+)?\s*$",
                 RegexOptions.CultureInvariant);
             if (mExp.Success)
                 return (mExp.Groups["unit"].Success ? mExp.Groups["unit"].Value : string.Empty).Trim();
 
-            // número [unidad]
+            // number [unit]
             var mNum = Regex.Match(rhs,
                 @"[+-]?\d+(?:\.\d+)?\s*(?<unit>[" + UnitTokenClassNoDigits + @"]+)?\s*$",
                 RegexOptions.CultureInvariant);
@@ -599,7 +600,7 @@ namespace GH_Calcpad.Classes
             return string.Empty;
         }
 
-        // NUEVO (opcional): obtener los valores EXACTOS como texto, tal como aparecen en HTML (sin recorte)
+        // Optional: get exact textual values as displayed (no rounding)
         public List<string> GetResultValuesText()
         {
             var resultText = new List<string>();
@@ -627,7 +628,7 @@ namespace GH_Calcpad.Classes
             string tail = lastEq >= 0 ? block.Substring(lastEq + 1) : block;
             tail = NormalizeSpacesAndTokens(tail).Trim();
 
-            // científica: base × 10^exp (con × real)
+            // Scientific notation: a × 10^b (with real ×)
             var sci = Regex.Match(
                 tail,
                 @"^\s*([+-]?\d+(?:\.\d+)?)\s*×\s*10\^([+-]?\d+)\b",
@@ -635,11 +636,11 @@ namespace GH_Calcpad.Classes
             );
             if (sci.Success)
             {
-                // Devolvemos exactamente el texto “a × 10^b”
+                // Return exactly the text "a × 10^b"
                 return $"{sci.Groups[1].Value} × 10^{sci.Groups[2].Value}";
             }
 
-            // decimal normal: devolver todos los dígitos capturados
+            // Standard decimal: return all captured digits
             var num = Regex.Match(tail, @"^\s*([+-]?\d+(?:\.\d+)?)\b", RegexOptions.CultureInvariant);
             if (num.Success)
                 return num.Groups[1].Value;
@@ -647,7 +648,7 @@ namespace GH_Calcpad.Classes
             return string.Empty;
         }
 
-        // Preprocesado de aliases de unidades no soportadas por el parser
+        // Preprocessing for unsupported unit aliases
         private string PreprocessCode(string code)
         {
             string s = code ?? string.Empty;
@@ -658,7 +659,7 @@ namespace GH_Calcpad.Classes
         {
             if (string.IsNullOrEmpty(s)) return string.Empty;
 
-            // ton_f / tonf / tf → 1000 kgf (inserta espacio; no toca identificadores)
+            // ton_f / tonf / tf → 1000 kgf (insert space; don't touch identifiers)
             s = Regex.Replace(
                 s,
                 @"(?<![A-Za-z0-9_])ton_f(?![A-Za-z0-9_])",

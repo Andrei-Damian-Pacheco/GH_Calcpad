@@ -6,144 +6,161 @@ using GH_Calcpad.Properties;
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// Component that provides guidance on the connection workflow between Grasshopper (GH) and Calcpad (CP).
-    /// Explains typical workflows and best practices for using GH_Calcpad components.
+    /// Help component for GH_Calcpad.
+    /// Provides workflows, component overview, best practices and usage examples.
+    /// Updated for version 1.2.0 (current supported input: .cpd; .cpdz experimental / limited).
+    /// All text in English for documentation consistency.
     /// </summary>
     public class GH_Calcpad_Help : GH_Component
     {
         public GH_Calcpad_Help()
           : base("Calcpad Help", "CP_Help",
-                 "Provides guidance on the connection workflow between Grasshopper and Calcpad",
+                 "Provides workflows, component overview, best practices and examples for GH_Calcpad",
                  "Calcpad", "7. Help & Support")
         { }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            // No inputs required - this is an informational component
+            // No inputs
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddTextParameter("Workflow", "W", "Step-by-step guide for typical workflows", GH_ParamAccess.list);
-            pManager.AddTextParameter("ComponentGuide", "C", "Description of each component and its purpose", GH_ParamAccess.list);
-            pManager.AddTextParameter("BestPractices", "B", "Best practices and usage tips", GH_ParamAccess.list);
+            pManager.AddTextParameter("Workflow", "W", "Step-by-step guides for the main workflows", GH_ParamAccess.list);
+            pManager.AddTextParameter("ComponentGuide", "C", "Description of each component and purpose", GH_ParamAccess.list);
+            pManager.AddTextParameter("BestPractices", "B", "Best practices and recommendations", GH_ParamAccess.list);
             pManager.AddTextParameter("Examples", "E", "Common usage examples", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            // 1) Updated workflows with new components
+            // 1) Workflows (only .cpd fully supported in v1.2.0)
             var workflow = new List<string>
             {
-                "MAIN WORKFLOWS:",
+                "MAIN WORKFLOWS (v1.2.0 – current support: .cpd):",
                 "",
-                "🔥 OPTIMIZATION WORKFLOW (REVOLUTIONARY):",
-                "1. Load CPD → Optimizer → Galapagos → Best Solution → Save/Export",
-                "   • Auto-detection of design variables",
-                "   • Smart cache (5-10x faster)",
-                "   • Zero configuration for typical cases",
+                "🔥 OPTIMIZATION WORKFLOW:",
+                "1. Load CPD → Optimizer → Galapagos → Best Solution → Save / Export",
+                "   • Automatic detection of design variables",
+                "   • Single fitness + objective values",
                 "",
                 "📊 BASIC WORKFLOW:",
-                "1. Load CPD/CPDz → Play → Export",
-                "   • Load → Calculate → Report",
+                "1. Load CPD → Play → Export",
+                "   • Load → Compute → Report",
                 "",
-                "🔧 ADVANCED WORKFLOW:",
-                "1. Load CPD → Modify Variables → Play → Filter Results → Export/Save",
-                "   • Variables → Values → Calculate → Filter → Export",
+                "🔧 VARIABLE MODIFICATION WORKFLOW:",
+                "1. Load CPD → Search Variables → Play → Export",
+                "   • Selectively modify chosen variables, then compute",
                 "",
-                "📈 PARAMETRIC STUDY WORKFLOW:",
-                "1. Load CPD → Series/Range → Play → Filter → Analysis",
-                "   • Base → Parameter sets → Results → Analysis"
+                "📈 ADVANCED (RESULT FILTERING):",
+                "1. Load CPD → (Search Variables optional) → Play → Search Results → Export / Save",
+                "   • Modify subset → Compute → Filter key outputs",
+                "",
+                "🧪 PARAMETRIC STUDY:",
+                "1. Load CPD → (Sliders / Series / Range) → Search Variables → Play → Search Results → Analyze",
+                "   • Generate variants → Evaluate → Visualize",
+                "",
+                "ℹ NOTE: Load CPDz component exists; full compiled (.cpdz) workflow support is planned for a future release."
             };
 
-            // 2) Updated guide with all components
+            // 2) Component guide
             var componentGuide = new List<string>
             {
-                "📋 BLOCK 1 - INFORMATION:",
-                "• Info - Plugin and Calcpad.Core versions",
+                "📋 INFORMATION & DIAGNOSTICS:",
+                "• Info – Plugin + Calcpad.Core versions",
                 "",
-                "📁 BLOCK 2 - FILE LOADING:",
-                "• Load CPD - .cpd files (source code)",
-                "• Load CPDz - .cpdz files (compiled/protected)",
+                "📁 FILE LOADING:",
+                "• Load CPD – Load and parse .cpd source sheets",
+                "• Load CPDz – Experimental (works only if textual source is embedded)",
                 "",
-                "🔧 BLOCK 3 - MODIFICATION:",
-                "• Modify Variables - Modifies variables pre-calculation",
+                "🔧 VARIABLE MODIFICATION:",
+                "• Search Variables – Filter + overwrite selected variables keeping full order",
                 "",
-                "⚡ BLOCK 4 - EXECUTION & OPTIMIZATION:",
-                "• Play CPD - Main calculation engine",
-                "• 🚀 Optimizer - AI for automatic optimization",
+                "⚡ EXECUTION & OPTIMIZATION:",
+                "• Play CPD – Core calculation engine",
+                "• Optimizer – Multi-objective fitness preparation + caching",
                 "",
-                "🔍 BLOCK 5 - FILTERING:",
-                "• Filter Results - Extracts specific results",
+                "🔍 RESULT FILTERING:",
+                "• Search Results – Extract specific result variables",
                 "",
-                "💾 BLOCK 6 - SAVING & EXPORT:",
-                "• Save CPD - Saves modified files",
-                "• Export PDF - Vectorial PDF reports",
-                "• Export Word - Editable Word documents",
+                "💾 SAVING & EXPORT:",
+                "• Save CPD – Save modified sheet (.cpd / .txt)",
+                "• Export HTML – HTML report",
+                "• Export PDF – PDF report",
+                "• Export Word – Editable .docx report",
                 "",
-                "❓ BLOCK 7 - HELP:",
-                "• Help - This interactive guide"
+                "❓ HELP & SUPPORT:",
+                "• Help – This guide"
             };
 
-            // 3) Best practices with new features
+            // 3) Best practices
             var bestPractices = new List<string>
             {
-                "🚀 REVOLUTIONARY OPTIMIZATION:",
-                "• Optimizer auto-detects design variables",
-                "• Smart cache: 60x faster setup (30min → 30sec)",
-                "• Native multi-objective with automatic convergence",
+                "⚙ VARIABLES:",
+                "• Maintain 1:1 alignment: Variables / Values / Units.",
+                "• Use Search Variables for partial updates (do not reorder original lists).",
+                "• Use NaN in 'Values' (Play) to skip a variable position.",
                 "",
-                "⚡ PERFORMANCE:",
-                "• Cache system: 5-10x faster in optimization",
-                "• CaptureExplicit=True for specific variables",
-                "• Automatic file change monitoring",
+                "🚀 OPTIMIZER:",
+                "• Leave design variable list empty first run → auto-detection.",
+                "• Review 'Status' + 'Convergence Info' to decide stopping.",
+                "• Reuse the same sheet instance to leverage caching.",
                 "",
-                "🔧 VARIABLE HANDLING:",
-                "• Maintain 1:1 correspondence between Variables/Values/Units",
-                "• Use Modify Variables for selective changes",
-                "• Filter Results to extract specific results",
+                "📐 PERFORMANCE:",
+                "• Freeze unchanged upstream elements to avoid recompute.",
+                "• Use CaptureExplicit=True when you only need explicit marked variables.",
                 "",
-                "📋 WORKFLOW ORGANIZATION:",
-                "• Basic: Load → Play → Export",
-                "• Advanced: Load → Modify → Play → Filter → Export",
-                "• Optimization: Load → Optimizer → Galapagos → Save",
+                "🔍 RESULTS:",
+                "• Search Results to reduce downstream graph clutter.",
+                "• Keep result variable names short and without spaces.",
                 "",
-                "⚠️ ERROR HANDLING:",
-                "• Check Success output in Play and Export",
-                "• Optimizer includes convergence analysis",
-                "• Automatic fallbacks for robustness"
+                "📦 WORKFLOWS:",
+                "• Basic: Load → Play → Export.",
+                "• Advanced: Load → Search Variables → Play → Search Results → Export.",
+                "• Optimization: Load → Optimizer → Galapagos → Save / Export.",
+                "",
+                "🛠 ERROR HANDLING:",
+                "• Always check 'Success' outputs.",
+                "• Yellow = warning (recoverable), Red = fix required.",
+                "• If a value not updated: verify exact variable name.",
+                "",
+                "📄 EXPORT:",
+                "• Reuse 'UpdatedSheet' across HTML/PDF/Word components.",
+                "• Save CPD before exports if internal state changed.",
+                "",
+                "🔮 FUTURE:",
+                "• Enhanced .cpdz support + richer optimizer diagnostics planned."
             };
 
-            // 4) Updated examples with new capabilities
+            // 4) Examples
             var examples = new List<string>
             {
-                "🚀 AUTOMATIC OPTIMIZATION (REVOLUTIONARY):",
-                "1. Load CPD → Optimizer (auto-detects variables)",
-                "2. Connect to Galapagos (automatic configuration)",
-                "3. Run optimization (smart cache)",
-                "4. Save CPD + Export PDF (documentation)",
+                "🚀 AUTOMATIC OPTIMIZATION:",
+                "1. Load CPD → Optimizer → Galapagos → Best fitness → Save CPD → Export PDF",
                 "",
-                "📊 ADVANCED PARAMETRIC ANALYSIS:",
-                "1. Load CPD → Modify Variables",
-                "2. Series → Play CPD → Filter Results",
-                "3. Chart results + Export Word",
+                "🎯 MULTI-OBJECTIVE:",
+                "1. Load CPD → Optimizer (set objectives/modes) → Galapagos / Octopus → Export Word + PDF",
                 "",
-                "🔍 MULTI-OBJECTIVE OPTIMIZATION:",
-                "1. Load CPD → Optimizer (specify objectives)",
-                "2. Octopus/Galapagos multi-objetivo",
-                "3. Pareto frontier analysis",
-                "4. Best solution → Save + Export",
+                "🔧 SELECTIVE EDIT:",
+                "1. Load CPD → Search Variables (change few params) → Play → Export HTML",
                 "",
-                "📈 COMPLETE AUTOMATED WORKFLOW:",
-                "1. Load CPD → Modify Variables → Play",
-                "2. Filter Results → Save CPD",
-                "3. Export PDF + Export Word",
-                "4. Timer → periodic automation",
+                "📊 PARAMETRIC STUDY:",
+                "1. Load CPD → Sliders / Series → Search Variables → Play → Search Results → Graph",
                 "",
-                "⚙️ STRUCTURAL ENGINEERING:",
-                "• Beam optimization: minimize weight + deflection",
-                "• Column design: minimize cost + maximize safety",
-                "• Truss optimization: minimize material + stress constraints"
+                "🗂 COMPLETE PIPELINE:",
+                "1. Load CPD → Search Variables → Play → Search Results → Save CPD → Export PDF / Word",
+                "",
+                "🏗 STRUCTURAL:",
+                "• Minimize weight with displacement + stress constraints",
+                "• Column optimization: cost vs slenderness",
+                "",
+                "🛠 MECHANICAL:",
+                "• Section tuning: stiffness vs mass",
+                "• Thermal/material parameter sweeps",
+                "",
+                "🏛 ENVELOPE:",
+                "• Insulation parameter variations → energy performance comparison",
+                "• Compare alternatives using filtered key outputs"
             };
 
             // Set outputs
@@ -152,9 +169,9 @@ namespace GH_Calcpad.Components
             DA.SetDataList(2, bestPractices);
             DA.SetDataList(3, examples);
 
-            // Updated informational message
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, 
-                $"GH_Calcpad Help v3.0 - {workflow.Count + componentGuide.Count + bestPractices.Count + examples.Count} lines | Includes revolutionary Optimizer");
+            AddRuntimeMessage(
+                GH_RuntimeMessageLevel.Remark,
+                $"GH_Calcpad Help v1.2.0 | Lines: {workflow.Count + componentGuide.Count + bestPractices.Count + examples.Count}");
         }
 
         public override Guid ComponentGuid

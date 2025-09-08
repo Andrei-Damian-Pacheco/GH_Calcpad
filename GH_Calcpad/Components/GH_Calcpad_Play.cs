@@ -31,9 +31,6 @@ namespace GH_Calcpad.Components
             p.AddNumberParameter("Elapsed", "T", "Calculation time (ms)", GH_ParamAccess.item);
             p.AddBooleanParameter("Success", "S", "True if calculation successful", GH_ParamAccess.item);
             p.AddGenericParameter("UpdatedSheet", "US", "Updated CalcpadSheet for export", GH_ParamAccess.item);
-
-            // NUEVO: salida temporal para depuración
-            p.AddTextParameter("DebugHtml", "H", "Raw HTML/Text produced by the parser (temporary output)", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -57,7 +54,7 @@ namespace GH_Calcpad.Components
                 return;
             }
 
-            // 2) Aplicar valores (tolerante)
+            // 2) Apply values (tolerant)
             try
             {
                 int varCount = sheet.Variables.Count;
@@ -85,7 +82,7 @@ namespace GH_Calcpad.Components
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error applying values: {exAssign.Message}");
             }
 
-            // 3) Calcular
+            // 3) Calculate
             var sw = Stopwatch.StartNew();
             bool success = false;
             var equations = new List<string>();
@@ -97,9 +94,9 @@ namespace GH_Calcpad.Components
                 sheet.Calculate();
                 success = true;
 
-                equations = sheet.GetResultEquations(); // Name=(RHS)
-                results = sheet.GetResultValues();      // Result
-                units = sheet.GetResultUnits();         // unit
+                equations = sheet.GetResultEquations();
+                results = sheet.GetResultValues();
+                units = sheet.GetResultUnits();
             }
             catch (Exception exCalc)
             {
@@ -107,16 +104,13 @@ namespace GH_Calcpad.Components
             }
             sw.Stop();
 
-            // 4) Salidas
+            // 4) Outputs
             DA.SetDataList(0, equations);
             DA.SetDataList(1, results);
             DA.SetDataList(2, units);
             DA.SetData(3, sw.Elapsed.TotalMilliseconds);
             DA.SetData(4, success);
             DA.SetData(5, new GH_ObjectWrapper(sheet));
-
-            // NUEVO: salida temporal con el HTML/texto bruto del parser
-            DA.SetData(6, sheet.LastHtmlResult);
         }
 
         private void TryAssign(CalcpadSheet sheet, string name, double value)

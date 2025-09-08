@@ -7,40 +7,40 @@ using System.Text.RegularExpressions;
 namespace GH_Calcpad.Classes
 {
     /// <summary>
-    /// Calcpad calculation engine optimized for Grasshopper
-    /// Designed for automated processes and optimization algorithms
+    /// Calcpad calculation engine optimized for Grasshopper.
+    /// Designed for automated runs and optimization algorithms.
     /// </summary>
     public class CalcpadEngine : IDisposable
     {
         #region Properties
 
         /// <summary>
-        /// Input variables extracted from CPD code
+        /// Input variable names extracted from CPD code.
         /// </summary>
         public List<string> InputVariables { get; private set; }
 
         /// <summary>
-        /// Current values of input variables
+        /// Current numeric values for the input variables.
         /// </summary>
         public List<double> InputValues { get; private set; }
 
         /// <summary>
-        /// Calculated result variables
+        /// Output (result) variable names detected in equations.
         /// </summary>
         public List<string> OutputVariables { get; private set; }
 
         /// <summary>
-        /// Calculated values of result variables
+        /// Current numeric values of the output variables.
         /// </summary>
         public List<double> OutputValues { get; private set; }
 
         /// <summary>
-        /// Indicates if the engine is ready for calculations
+        /// True when the engine has code loaded and is ready to calculate.
         /// </summary>
         public bool IsReady => _calculator != null && !string.IsNullOrEmpty(_cleanCode);
 
         /// <summary>
-        /// Last calculation time in milliseconds
+        /// Duration of the last calculation (milliseconds).
         /// </summary>
         public double LastCalculationTime { get; private set; }
 
@@ -59,7 +59,7 @@ namespace GH_Calcpad.Classes
         #region Constructor & Initialization
 
         /// <summary>
-        /// Calcpad engine constructor
+        /// Creates a new CalcpadEngine instance and initializes internal calculator.
         /// </summary>
         public CalcpadEngine()
         {
@@ -90,11 +90,11 @@ namespace GH_Calcpad.Classes
         #region Public Methods
 
         /// <summary>
-        /// Loads a CPD file and prepares the engine for calculations
+        /// Loads CPD source code and prepares variable tracking.
         /// </summary>
-        /// <param name="cpdCode">Complete CPD code</param>
-        /// <param name="inputVariables">Identified input variables</param>
-        /// <param name="inputValues">Initial values of variables</param>
+        /// <param name="cpdCode">Full CPD source text.</param>
+        /// <param name="inputVariables">Input variable names.</param>
+        /// <param name="inputValues">Initial values for the input variables.</param>
         public void LoadCode(string cpdCode, List<string> inputVariables, List<double> inputValues)
         {
             if (string.IsNullOrEmpty(cpdCode))
@@ -112,15 +112,13 @@ namespace GH_Calcpad.Classes
             InputValues.Clear();
             InputValues.AddRange(inputValues);
 
-            // Identify output variables (calculation equations)
+            // Detect output variables (equations producing results).
             IdentifyOutputVariables();
         }
 
         /// <summary>
-        /// Updates input variable values
-        /// Optimized for optimization algorithms that change values frequently
+        /// Replaces current input variable values (fast path for iterative algorithms).
         /// </summary>
-        /// <param name="newValues">New values for input variables</param>
         public void UpdateInputValues(List<double> newValues)
         {
             if (newValues.Count != InputVariables.Count)
@@ -131,10 +129,9 @@ namespace GH_Calcpad.Classes
         }
 
         /// <summary>
-        /// Executes calculation with current values
-        /// Main method for automated processes
+        /// Executes the calculation using the currently loaded code and input values.
         /// </summary>
-        /// <returns>True if calculation was successful</returns>
+        /// <returns>True if execution succeeded; false otherwise.</returns>
         public bool Calculate()
         {
             if (!IsReady)
@@ -144,7 +141,7 @@ namespace GH_Calcpad.Classes
 
             try
             {
-                // Set input variable values
+                // Assign input variable values.
                 for (int i = 0; i < InputVariables.Count; i++)
                 {
                     if (IsValidVariableName(InputVariables[i]))
@@ -153,10 +150,10 @@ namespace GH_Calcpad.Classes
                     }
                 }
 
-                // Execute calculation
-                string result = _calculator.Run(_cleanCode);
+                // Run calculation.
+                _calculator.Run(_cleanCode);
 
-                // Extract output values
+                // Pull output values.
                 ExtractOutputValues();
 
                 stopwatch.Stop();
@@ -171,23 +168,18 @@ namespace GH_Calcpad.Classes
 
                 System.Diagnostics.Debug.WriteLine($"Calculation error: {ex.Message}");
 
-                // Fill with NaN in case of error
+                // Populate with NaN on failure.
                 OutputValues.Clear();
                 for (int i = 0; i < OutputVariables.Count; i++)
-                {
                     OutputValues.Add(double.NaN);
-                }
 
                 return false;
             }
         }
 
         /// <summary>
-        /// Gets the current value of a specific variable
-        /// Useful for individual queries
+        /// Evaluates and returns the current value of a single variable.
         /// </summary>
-        /// <param name="variableName">Variable name</param>
-        /// <returns>Variable value or NaN if not found</returns>
         public double GetVariableValue(string variableName)
         {
             if (!IsReady)
@@ -197,13 +189,11 @@ namespace GH_Calcpad.Classes
             {
                 string result = _calculator.Eval(variableName);
                 if (double.TryParse(result, NumberStyles.Any, CultureInfo.InvariantCulture, out double value))
-                {
                     return value;
-                }
             }
             catch
             {
-                // Suppress errors and return NaN
+                // Ignore and return NaN.
             }
 
             return double.NaN;
@@ -222,20 +212,20 @@ namespace GH_Calcpad.Classes
 
             try
             {
-                // Remove BOM
+                // Remove BOM if present.
                 if (cleaned.StartsWith("\uFEFF"))
                     cleaned = cleaned.Substring(1);
 
-                // Fix problematic variable names
-                cleaned = cleaned.Replace("f'h", "fh");
-                cleaned = cleaned.Replace("i,j_k1", "ijk1");
-                cleaned = cleaned.Replace("e_d", "ed");
-                cleaned = cleaned.Replace("f_g", "fg");
+                // Fix known problematic variable names.
+                cleaned = cleaned.Replace("f'h", "fh")
+                                 .Replace("i,j_k1", "ijk1")
+                                 .Replace("e_d", "ed")
+                                 .Replace("f_g", "fg");
 
-                // Normalize line breaks
+                // Normalize line endings.
                 cleaned = cleaned.Replace("\r\n", "\n").Replace("\r", "\n");
 
-                // Ensure ends with line break
+                // Ensure trailing newline.
                 if (!cleaned.EndsWith("\n"))
                     cleaned += "\n";
 
@@ -243,7 +233,8 @@ namespace GH_Calcpad.Classes
             }
             catch
             {
-                return code; // Return original if error occurs
+                // On failure, return original text.
+                return code;
             }
         }
 
@@ -266,18 +257,14 @@ namespace GH_Calcpad.Classes
                     {
                         string varName = ExtractVariableName(trimmed);
                         if (!string.IsNullOrEmpty(varName))
-                        {
                             OutputVariables.Add(varName);
-                        }
                     }
                 }
 
-                // Initialize output values list
+                // Initialize output values (NaN placeholders).
                 OutputValues.Clear();
                 for (int i = 0; i < OutputVariables.Count; i++)
-                {
                     OutputValues.Add(double.NaN);
-                }
             }
             catch (Exception ex)
             {
@@ -299,7 +286,7 @@ namespace GH_Calcpad.Classes
 
             string rightSide = parts[1].Trim();
 
-            // It's a calculation if it contains operations
+            // Consider it a calculation if the RHS includes operators/functions.
             return rightSide.Contains("+") || rightSide.Contains("-") || rightSide.Contains("*") ||
                    rightSide.Contains("/") || rightSide.Contains("(") || rightSide.Contains("sqrt") ||
                    rightSide.Contains("^");
@@ -352,7 +339,7 @@ namespace GH_Calcpad.Classes
             {
                 if (disposing)
                 {
-                    // Clean up managed resources
+                    // Managed resources.
                     _calculator = null;
                     _settings = null;
                 }

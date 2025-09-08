@@ -89,15 +89,15 @@ namespace GH_Calcpad.Components
                 return;
             }
 
-            // Normalización antes de parsear
+            // Normalization before parsing
             var normalized = NormalizeForParser(sourceText);
 
-            // 1) Solo explícitos (cuadros amarillos)
+            // 1) Explicit only (yellow boxes)
             List<string> names, units;
             List<double> values;
             CalcpadSyntax.Instance.ParseVariables(normalized, captureExplicit: true, out names, out values, out units);
 
-            // 2) Mensaje breve si no se hallaron explícitos
+            // 2) Brief message if no explicit variables found
             if (names.Count == 0)
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "No explicit ?{…} inputs found in this package.");
 
@@ -118,14 +118,14 @@ namespace GH_Calcpad.Components
             DA.SetData(4, status);
         }
 
-        // Extrae mejor texto posible y clasifica Status.
-        // Status: "TextOK" (cpd textual) | "Binary" (cpd compilado) | "HtmlParsed" (texto desde html) | "NoSource" (sin fuente útil)
+        // Extract best possible text and classify Status.
+        // Status: "TextOK" (textual cpd) | "Binary" (compiled cpd) | "HtmlParsed" (text from html) | "NoSource" (no useful source)
         private static string ExtractBestTextFromCpdz(string path, out List<string> entriesOut, out string status)
         {
             status = "NoSource";
             byte[] fileBytes = File.ReadAllBytes(path);
 
-            // Algunos .cpdz vienen en Base64
+            // Some .cpdz files come in Base64
             byte[] zipBytes;
             try
             {
@@ -142,7 +142,7 @@ namespace GH_Calcpad.Components
             {
                 entriesOut = archive.Entries.Select(e => e.FullName).ToList();
 
-                // 1) Preferir .cpd
+                // 1) Prefer .cpd
                 var cpdEntry = archive.Entries
                     .FirstOrDefault(e => e.Name.EndsWith(".cpd", StringComparison.OrdinalIgnoreCase));
                 if (cpdEntry != null)
@@ -198,7 +198,7 @@ namespace GH_Calcpad.Components
             }
         }
 
-        // Detecta texto/gzip/deflate/zip anidado. Si no es parsable, marca binary=true.
+        // Detect text/gzip/deflate/nested zip. If not parseable, mark binary=true.
         private static string ReadZipEntrySmart(ZipArchiveEntry entry, out bool binary)
         {
             binary = false;
@@ -209,7 +209,7 @@ namespace GH_Calcpad.Components
                 es.CopyTo(ms);
                 var data = ms.ToArray();
 
-                // Zip anidado (PK..)
+                // Nested zip (PK..)
                 if (data.Length > 4 && data[0] == 0x50 && data[1] == 0x4B)
                 {
                     using (var inner = new MemoryStream(data))
@@ -220,7 +220,7 @@ namespace GH_Calcpad.Components
                         {
                             string txt = ReadZipEntryTextWithEncoding(innerCpd);
                             if (!string.IsNullOrWhiteSpace(txt)) return txt;
-                            binary = true; // también venía compilado adentro
+                            binary = true; // also came compiled inside
                             return string.Empty;
                         }
 
@@ -256,13 +256,13 @@ namespace GH_Calcpad.Components
                     }
                 }
 
-                // ¿Parece texto?
+                // Looks like text?
                 if (IsLikelyText(data))
                 {
                     return DecodeTextFromBytes(data);
                 }
 
-                // Binario/compilado
+                // Binary/compiled
                 binary = true;
                 return string.Empty;
             }
@@ -285,7 +285,7 @@ namespace GH_Calcpad.Components
                 byte b = data[i];
                 if (b == 0x09 || b == 0x0A || b == 0x0D) { printable++; continue; }
                 if (b >= 0x20 && b <= 0x7E) { printable++; continue; }
-                if (b >= 0xC2 && b <= 0xF4) { printable++; continue; } // inicio UTF-8 multibyte (heurística)
+                if (b >= 0xC2 && b <= 0xF4) { printable++; continue; } // UTF-8 multibyte start (heuristic)
                 control++;
             }
             return printable >= control * 4;

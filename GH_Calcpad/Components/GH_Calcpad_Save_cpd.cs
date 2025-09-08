@@ -52,11 +52,11 @@ namespace GH_Calcpad.Components
                 "True = save",
                 GH_ParamAccess.item, false);
 
-            // Opcionales (como en el resto de exportadores)
+            // Optional (like in other exporters)
             p[1].Optional = true; // N
             p[2].Optional = true; // F
             p[3].Optional = true; // FMT
-            // X no opcional (por consistencia con los demás)
+            // X not optional (for consistency with others)
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager p)
@@ -89,7 +89,7 @@ namespace GH_Calcpad.Components
 
             if (!execute)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Pon Execute=True para guardar CPD/TXT");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Set Execute=True to save CPD/TXT");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -97,7 +97,7 @@ namespace GH_Calcpad.Components
 
             if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'Output Folder'. No se guarda hasta tener ruta.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'Output Folder'. No save until path is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -105,7 +105,7 @@ namespace GH_Calcpad.Components
 
             if (string.IsNullOrWhiteSpace(fileName))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'File'. No se guarda hasta tener nombre.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'File'. No save until name is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -119,39 +119,39 @@ namespace GH_Calcpad.Components
                 return;
             }
 
-            // 3) Código
+            // 3) Code
             string code = sheet.OriginalCode;
             if (string.IsNullOrEmpty(code))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "CalcpadSheet contains no code. Usa 'Play CPD' antes.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "CalcpadSheet contains no code. Use 'Play CPD' first.");
                 return;
             }
 
-            // 4) Paths (sin fallbacks)
+            // 4) Paths (no fallbacks)
             string baseName = Path.GetFileNameWithoutExtension(fileName.Trim());
             string folder = outputFolder.Trim();
 
             string ext = saveAsTxt ? ".txt" : ".cpd";
             string finalPath = Path.Combine(folder, baseName + ext);
 
-            // 5) Asegurar carpeta
+            // 5) Ensure folder
             try
             {
                 if (!Directory.Exists(folder))
                 {
                     Directory.CreateDirectory(folder);
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Directorio creado: {folder}");
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Directory created: {folder}");
                 }
             }
             catch (Exception ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"No se pudo crear el directorio: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Could not create directory: {ex.Message}");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
             }
 
-            // 6) Si existe y el contenido es igual, no reescribir
+            // 6) If exists and content is equal, don't rewrite
             try
             {
                 if (File.Exists(finalPath))
@@ -161,25 +161,25 @@ namespace GH_Calcpad.Components
                     {
                         DA.SetData(0, finalPath);
                         DA.SetData(1, true);
-                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Archivo ya actualizado. No se reescribe.");
+                        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "File already up-to-date. Not rewritten.");
                         return;
                     }
                 }
             }
             catch (Exception ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Omitiendo comprobación de contenido: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Skipping content check: {ex.Message}");
             }
 
-            // 7) Escritura segura (tmp + replace/move)
+            // 7) Safe write (tmp + replace/move)
             bool success = false;
             long fileSize = 0;
             string tmpPath = finalPath + ".tmp";
 
             try
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Guardando ({ext}) {code.Length} chars → {baseName}{ext}");
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Ruta objetivo: {finalPath}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Saving ({ext}) {code.Length} chars → {baseName}{ext}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Target path: {finalPath}");
 
                 File.WriteAllText(tmpPath, code, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
@@ -192,36 +192,36 @@ namespace GH_Calcpad.Components
                 {
                     fileSize = new FileInfo(finalPath).Length;
                     success = true;
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"✅ Archivo guardado: {fileSize:N0} bytes");
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"✅ File saved: {fileSize:N0} bytes");
                 }
                 else
                 {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Archivo no guardado.");
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "File not saved.");
                 }
             }
             catch (UnauthorizedAccessException)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Sin permisos para escribir en: {finalPath}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"No permission to write to: {finalPath}");
                 TryDelete(tmpPath);
             }
             catch (DirectoryNotFoundException)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Directorio no encontrado: {folder}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Directory not found: {folder}");
                 TryDelete(tmpPath);
             }
             catch (PathTooLongException)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Ruta demasiado larga: {finalPath}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Path too long: {finalPath}");
                 TryDelete(tmpPath);
             }
             catch (IOException ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error de I/O: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"I/O error: {ex.Message}");
                 TryDelete(tmpPath);
             }
             catch (Exception ex)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error al guardar: {ex.Message}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error saving: {ex.Message}");
                 TryDelete(tmpPath);
             }
 
@@ -232,11 +232,11 @@ namespace GH_Calcpad.Components
             if (success)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                    $"✅ Guardado → {Path.GetFileName(finalPath)} | {fileSize / 1024.0:F1} KB | Variables: {sheet.Variables?.Count ?? 0}");
+                    $"✅ Saved → {Path.GetFileName(finalPath)} | {fileSize / 1024.0:F1} KB | Variables: {sheet.Variables?.Count ?? 0}");
             }
             else
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "❌ Guardado fallido");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "❌ Save failed");
             }
         }
 

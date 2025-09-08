@@ -10,8 +10,8 @@ using System.Xml;
 namespace GH_Calcpad.Classes
 {
     /// <summary>
-    /// Cargador/validador de sintaxis Calcpad con fallback a sets internos.
-    /// Proporciona extracción robusta de variables (explícitas y literales) evitando ecuaciones.
+    /// Calcpad syntax loader/validator with fallback to internal sets.
+    /// Provides robust variable extraction (explicit and literal) avoiding equations.
     /// </summary>
     public sealed class CalcpadSyntax
     {
@@ -20,7 +20,7 @@ namespace GH_Calcpad.Classes
         private readonly HashSet<string> _functions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _keywords  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Conjunto dinámico de caracteres válidos en "unidad"
+        // Dynamic set of valid characters in "unit"
         private readonly HashSet<char> _unitChars = new HashSet<char>(new[]
         {
             // base
@@ -30,7 +30,7 @@ namespace GH_Calcpad.Classes
             'n','o','p','q','r','s','t','u','v','w','x','y','z',
             '0','1','2','3','4','5','6','7','8','9',
             '%','/','^','-','.','*','(',')','_',' ',
-            // símbolos típicos que aparecen en calcpad.xml
+            // typical symbols that appear in calcpad.xml
             'µ', // MICRO SIGN U+00B5
             'μ', // GREEK SMALL LETTER MU U+03BC
             '°', // DEGREE SIGN U+00B0
@@ -40,31 +40,31 @@ namespace GH_Calcpad.Classes
             '·'  // MIDDLE DOT U+00B7 (kN·m)
         });
 
-        // Operadores/rasgos que clasifican como ecuación
+        // Operators/traits that classify as equation
         private static readonly char[] _opChars = new[] { '+', '-', '*', '/', '^', '(', ')', '=' };
 
-        // Regex compilables dinámicamente (se reconstruyen tras cargar XML)
+        // Dynamically compilable regex (rebuilt after loading XML)
         private Regex RxExplicit1;
         private Regex RxExplicit2Inline;
         private Regex RxLiteralAssign;
 
-        // NUEVO: clase de caracteres para unidades (lista segura para dentro de [])
+        // NEW: character class for units (safe list for inside [])
         private string _unitCharClass = string.Empty;
         public string UnitCharClass => _unitCharClass;
 
         private CalcpadSyntax()
         {
-            // Fallback rápido
+            // Quick fallback
             SeedFallback();
 
-            // Intentar enriquecer unitChars desde calcpad.xml (formato AutoComplete/KeyWord)
+            // Try to enrich unitChars from calcpad.xml (AutoComplete/KeyWord format)
             TryAugmentUnitCharsFromCalcpadXmlNearAssembly();
             TryAugmentUnitCharsFromEmbeddedCalcpadXml();
 
-            // Construir regex con el set de caracteres de unidad actual
+            // Build regex with current unit character set
             RebuildRegexFromUnitChars();
 
-            // Cargar funciones desde los XML de Notepad++ (si existen)
+            // Load functions from Notepad++ XML files (if they exist)
             TryLoadFromNotepadPlusPlusSyntax();
         }
 
@@ -85,8 +85,8 @@ namespace GH_Calcpad.Classes
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    // 0) Capturar TODOS los casos valueunit';'name en la línea (múltiples posibles)
-                    //    Evita confundir con "…';'name = …" mediante lookahead negativo (no seguido de '=').
+                    // 0) Capture ALL valueunit';'name cases in the line (multiple possible)
+                    //    Avoid confusion with "…';'name = …" via negative lookahead (not followed by '=').
                     var inlineMatches = RxExplicit2Inline.Matches(line);
                     foreach (Match m in inlineMatches)
                     {
@@ -96,13 +96,13 @@ namespace GH_Calcpad.Classes
                             Upsert(map, order, name, dv, unit);
                     }
 
-                    // 1) Reemplazar "';'" por ';' y quitar comentarios reales (' y #)
+                    // 1) Replace "';'" with ';' and remove real comments (' and #)
                     var noComments = StripCommentsPreservingSeparator(line);
 
-                    // 2) Dividir por ';' para soportar múltiples asignaciones por línea
+                    // 2) Split by ';' to support multiple assignments per line
                     foreach (var segment in SplitSegments(noComments))
                     {
-                        // var = ?{val}unidad (explícito)
+                        // var = ?{val}unit (explicit)
                         var m1 = RxExplicit1.Match(segment);
                         if (m1.Success)
                         {
@@ -115,7 +115,7 @@ namespace GH_Calcpad.Classes
 
                         if (captureExplicit) continue;
 
-                        // Literales: name = 123 [unidad] (pueden existir varias por segmento)
+                        // Literals: name = 123 [unit] (multiple can exist per segment)
                         var m3s = RxLiteralAssign.Matches(segment);
                         foreach (Match m3 in m3s)
                         {
@@ -157,7 +157,7 @@ namespace GH_Calcpad.Classes
             }
         }
 
-        // Colapsa cualquier whitespace Unicode en 1 espacio y recorta
+        // Collapse any Unicode whitespace to 1 space and trim
         private static string NormalizeUnit(string unit)
         {
             if (string.IsNullOrWhiteSpace(unit)) return string.Empty;
@@ -165,12 +165,12 @@ namespace GH_Calcpad.Classes
             return unit.Trim();
         }
 
-        // Preserva "';'" como separador de sentencias y solo quita comentarios reales con ' o #
+        // Preserve "';'" as statement separator and only remove real comments with ' or #
         private static string StripCommentsPreservingSeparator(string line)
         {
             if (string.IsNullOrEmpty(line)) return line;
 
-            // Quitar # ... fin de línea
+            // Remove # ... end of line
             int iHash = line.IndexOf('#');
             if (iHash >= 0) line = line.Substring(0, iHash);
 
@@ -180,14 +180,14 @@ namespace GH_Calcpad.Classes
                 char c = line[i];
                 if (c == '\'')
                 {
-                    // Si es el token "';'", convertirlo a ';' y continuar
+                    // If it's the "';'" token, convert to ';' and continue
                     if (i + 2 < line.Length && line[i + 1] == ';' && line[i + 2] == '\'')
                     {
                         sb.Append(';');
-                        i += 2; // saltar ;'
+                        i += 2; // skip ;'
                         continue;
                     }
-                    // De lo contrario, es comentario Calcpad: cortar aquí
+                    // Otherwise, it's a Calcpad comment: cut here
                     break;
                 }
                 sb.Append(c);
@@ -242,38 +242,38 @@ namespace GH_Calcpad.Classes
             foreach (var k in minKeywords) _keywords.Add(k);
         }
 
-        // Construye la clase de caracteres para unidades a partir de _unitChars y recompila regex
+        // Build character class for units from _unitChars and recompile regex
         private void RebuildRegexFromUnitChars()
         {
             var unitClass = BuildUnitCharClass(_unitChars);
             _unitCharClass = unitClass;
 
-            // clase de identificador para nombres (mismo set que el pattern de name)
+            // identifier class for names (same set as name pattern)
             const string nameClass = "A-Za-z0-9_'′,\\.";
 
-            // var = ?{valor}unidad (anclado a segmento)
+            // var = ?{value}unit (anchored to segment)
             RxExplicit1 = new Regex(
                 @"^(?<lead>\s*)(?<name>[A-Za-z_][" + nameClass + @"]*)\s*=\s*\?\s*\{\s*(?<val>[-+]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?)\s*\}(?<unit>[" + unitClass + @"]*)$",
                 RegexOptions.Compiled | RegexOptions.Multiline);
 
-            // valueunit';'name en línea (múltiples), SIN permitir cortar el identificador
+            // valueunit';'name inline (multiple), WITHOUT allowing identifier cut
             RxExplicit2Inline = new Regex(
                 @"(?<!\S)(?<val>[-+]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?)\s*(?<unit>[" + unitClass + @"]*?)\s*';'\s*(?<name>[A-Za-z_][" + nameClass + @"]*)(?![" + nameClass + @"])(?!\s*=)",
                 RegexOptions.Compiled);
 
-            // name = 123 [unidad] (no anclado para Matches)
+            // name = 123 [unit] (not anchored for Matches)
             RxLiteralAssign = new Regex(
                 @"(?<!\S)(?<name>[A-Za-z_][" + nameClass + @"]*)\s*=\s*(?<num>[-+]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?)(?<unit>\s*[" + unitClass + @"]*)",
                 RegexOptions.Compiled);
         }
 
-        // Convierte el set de chars a un class de regex escapado (dentro de [])
+        // Convert char set to escaped regex class (inside [])
         private static string BuildUnitCharClass(HashSet<char> chars)
         {
             var sb = new StringBuilder();
             foreach (var ch in chars)
             {
-                // Escapar especiales de clase: \ - ] ^
+                // Escape class specials: \ - ] ^
                 if (ch == '\\' || ch == '-' || ch == ']' || ch == '^')
                     sb.Append('\\').Append(ch);
                 else
@@ -282,7 +282,7 @@ namespace GH_Calcpad.Classes
             return sb.ToString();
         }
 
-        // Lee calcpad.xml en la carpeta del assembly y añade caracteres únicos de tokens a _unitChars
+        // Read calcpad.xml in assembly folder and add unique token characters to _unitChars
         private void TryAugmentUnitCharsFromCalcpadXmlNearAssembly()
         {
             try
@@ -307,7 +307,7 @@ namespace GH_Calcpad.Classes
             catch { /* fallback */ }
         }
 
-        // Lee calcpad.xml embebido como recurso y añade caracteres de tokens a _unitChars
+        // Read embedded calcpad.xml as resource and add token characters to _unitChars
         private void TryAugmentUnitCharsFromEmbeddedCalcpadXml()
         {
             try
@@ -327,10 +327,10 @@ namespace GH_Calcpad.Classes
                     }
                 }
             }
-            catch { /* silencioso */ }
+            catch { /* silent */ }
         }
 
-        // Extrae <AutoComplete><KeyWord name="..."/> y agrega los caracteres no alfanuméricos útiles para unidades
+        // Extract <AutoComplete><KeyWord name="..."/> and add non-alphanumeric characters useful for units
         private void AugmentUnitCharsFromAutoCompleteXml(string xmlPath)
         {
             try
@@ -354,18 +354,18 @@ namespace GH_Calcpad.Classes
                     var tok = n.Attributes?["name"]?.Value ?? "";
                     if (string.IsNullOrWhiteSpace(tok)) continue;
 
-                    tok = tok.Trim(); // hay tokens con espacio final en el XML (ej. "kip ")
+                    tok = tok.Trim(); // there are tokens with trailing space in XML (e.g. "kip ")
                     foreach (var ch in tok)
                     {
-                        // Añadir solo caracteres potencialmente presentes en unidades.
-                        if (char.IsLetterOrDigit(ch)) { /* ya están */ }
+                        // Add only characters potentially present in units.
+                        if (char.IsLetterOrDigit(ch)) { /* already there */ }
                         else if (!char.IsControl(ch))
                         {
                             _unitChars.Add(ch);
                         }
                     }
 
-                    // También aprovechamos para funciones conocidas (mejora de heurística)
+                    // Also leverage for known functions (heuristic improvement)
                     if (Regex.IsMatch(tok, @"^[A-Za-z_][A-Za-z0-9_]*$"))
                         _functions.Add(tok);
                 }

@@ -47,7 +47,7 @@ namespace GH_Calcpad.Components
 
             if (!execute)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Pon Execute=True para exportar PDF");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Set Execute=True to export PDF");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -55,14 +55,14 @@ namespace GH_Calcpad.Components
 
             if (string.IsNullOrWhiteSpace(outputFolder))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'Output Folder'. No se exporta hasta tener ruta.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'Output Folder'. No export until path is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
             }
             if (string.IsNullOrWhiteSpace(fileName))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Conecta 'File'. No se exporta hasta tener nombre.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'File'. No export until name is provided.");
                 DA.SetData(0, null);
                 DA.SetData(1, false);
                 return;
@@ -76,7 +76,7 @@ namespace GH_Calcpad.Components
             }
             if (string.IsNullOrWhiteSpace(sheet.OriginalCode))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No code to export. Ejecuta 'Play CPD' antes.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No code to export. Run 'Play CPD' first.");
                 return;
             }
 
