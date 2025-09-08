@@ -1,0 +1,17 @@
+a1 = 10'comentario 1
+b1 = 20';'b2 = 15
+c1 = 30';'c2 = 35
+d = 40'comentario 2
+e_d = 50m
+f.g = 60cm
+f′_h = 70in
+f′h = 80ft
+i,j_kl = 90mm'comentario 3
+x = ? {1}'comentario 4
+y = ? {1}m'comentario 5
+z = ? {1}cm
+
+R = a1 + b1 + c1 + c2 + d
+S = e_d + f.g + f′_h + f′h + i,j_kl'comentario 6
+T = sqrt(50)*(b1/b2)^2
+V = x*m + y + z'comentario 7
