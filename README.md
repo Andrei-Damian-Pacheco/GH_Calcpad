@@ -12,27 +12,28 @@
 ## 📥 Descargas
 
 <p align="center">
-  <!-- Enlaces actualizados -->
-  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Plugin/GH_Calcpad.zip">
+  <!-- Enlaces con descarga directa -->
+  <a href="https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Plugin/GH_Calcpad.zip">
     <img src="https://img.shields.io/badge/Plugin-.zip%20(v1.2.0)-blue?style=for-the-badge" alt="Download ZIP">
   </a>
-  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Instructivo/GH_Calcpad.pdf">
+  <a href="https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Instructivo/GH_Calcpad.pdf">
     <img src="https://img.shields.io/badge/Manual-PDF-orange?style=for-the-badge" alt="Manual PDF">
   </a>
   <a href="https://www.food4rhino.com/en/app/calcpad">
     <img src="https://img.shields.io/badge/Food4Rhino-Page-green?style=for-the-badge" alt="Food4Rhino">
   </a>
-  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Examples/Example_01.cpd">
+  <a href="https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Examples/Example_01.cpd">
     <img src="https://img.shields.io/badge/Examples-Example%2001-brightgreen?style=for-the-badge" alt="Examples">
   </a>
 </p>
 
 | Recurso | Descripción | Enlace |
 |---------|-------------|--------|
-| Plugin (.zip) | `.gha` + DLL necesarias + manual | [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Plugin/GH_Calcpad.zip) |
-| Manual PDF | Instructivo/GH_Calcpad.pdf | [Ver / Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Instructivo/GH_Calcpad.pdf) |
+| Plugin (.zip) | `.gha` + DLL necesarias + manual | [Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Plugin/GH_Calcpad.zip) |
+| Manual PDF | Instructivo/GH_Calcpad.pdf | [Ver / Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Instructivo/GH_Calcpad.pdf) |
 | Food4Rhino | Página oficial | [Abrir](https://www.food4rhino.com/en/app/calcpad) |
-| Example 01 | Hoja de ejemplo `.cpd` | [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/Examples/Example_01.cpd) |
+| Example 01 | Hoja de ejemplo `.cpd` | [Descargar](https://raw.githubusercontent.com/Andrei-Damian-Pacheco/GH_Calcpad/master/Examples/Example_01.cpd) |
+
 
 ---
 
