@@ -3,42 +3,67 @@
 ![Grasshopper](https://img.shields.io/badge/Grasshopper-Rhino%208-green)
 ![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.8-blue)
 ![Version](https://img.shields.io/badge/Version-1.2.0-orange)
-![Status](https://img.shields.io/badge/.cpd-Supported-brightgreen)
-![Status](https://img.shields.io/badge/.cpdz-Experimental-lightgrey)
+![CPD](https://img.shields.io/badge/.cpd-Supported-brightgreen)
 
-**GH_Calcpad v1.2.0 embeds the Calcpad calculation engine inside Grasshopper for engineering-grade parametric computation, selective variable editing, multi‑objective optimization and professional report export.**
-
----
-
-## 🔍 What It Does
-
-Calcpad sheets (`.cpd`) can be executed directly inside Grasshopper:
-- Override selected input variables
-- Recompute on demand or under optimization
-- Extract specific result variables
-- Export structured reports (HTML / PDF / Word)
-
-> Current full support: **.cpd**. The loader for **.cpdz** is present but treated as *experimental* (only works if textual source is available). In this build the `Load CPDz` component is excluded from compilation.
+**GH_Calcpad v1.2.0 integra el motor de cálculo Calcpad dentro de Grasshopper para ejecutar hojas `.cpd`, modificar variables selectivamente, optimizar y exportar informes técnicos (HTML / PDF / Word).**
 
 ---
 
-## ✨ Key Features
+## 📥 Descargas
 
-| Area | Feature |
-|------|---------|
-| File Loading | Native `.cpd` sheet loading with variable & unit extraction |
-| Variable Editing | `Search Variables` component: targeted overrides without breaking ordering |
-| Execution | `Play CPD`: applies overrides (NaN = skip) and evaluates results |
-| Optimization | `Optimizer`: auto‑detect design variables & objectives, single fitness for Galapagos / Octopus |
-| Result Filtering | `Search Results`: extract only the result names you care about |
-| Reporting | Export to **HTML**, **PDF**, **Word (.docx)** |
-| Saving | Save modified sheet as `.cpd` or `.txt` |
-| Caching | Smart reuse of internal structures for faster iterative / GA runs |
-| Units & Equations | Delegated to Calcpad core (consistent unit and expression handling) |
+<p align="center">
+  <!-- Sustituye la URL del ZIP por el asset real de la release -->
+  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/releases/download/v1.2.0/GH_Calcpad_v1.2.0.zip">
+    <img src="https://img.shields.io/badge/Plugin-.zip%20(v1.2.0)-blue?style=for-the-badge" alt="Download ZIP">
+  </a>
+  <a href="https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/raw/master/Documents/Instructivo_GH-Calcpad.pdf">
+    <img src="https://img.shields.io/badge/Manual-PDF-orange?style=for-the-badge" alt="Manual PDF">
+  </a>
+  <a href="https://www.food4rhino.com/en/app/calcpad">
+    <img src="https://img.shields.io/badge/Food4Rhino-Page-green?style=for-the-badge" alt="Food4Rhino">
+  </a>
+  <a href="#examples">
+    <img src="https://img.shields.io/badge/Examples-Coming%20Soon-lightgrey?style=for-the-badge" alt="Examples">
+  </a>
+</p>
+
+| Recurso | Descripción | Enlace |
+|---------|-------------|--------|
+| Plugin (.zip) | `.gha` + DLL necesarias + manual | [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/releases/download/v1.2.0/GH_Calcpad_v1.2.0.zip) |
+| Manual PDF | Instructivo_GH-Calcpad.pdf | [Ver / Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/raw/master/Documents/Instructivo_GH-Calcpad.pdf) |
+| Food4Rhino | Página oficial | [Abrir](https://www.food4rhino.com/en/app/calcpad) |
+| Examples (próx.) | Casos de uso y optimización | (Pendiente) |
 
 ---
 
-## 🧩 Components (v1.2.0)
+## 🔍 Descripción
+
+Calcpad proporciona un motor de cálculo declarativo con manejo de unidades y generación de resultados. GH_Calcpad lo integra directamente en Grasshopper para habilitar:
+- Ejecución nativa de hojas `.cpd`
+- Cambios selectivos de variables sin reordenar listas
+- Optimización multi‑objetivo (Optimizer + Galapagos / Octopus)
+- Extracción filtrada de resultados
+- Exportación profesional (HTML / PDF / Word)
+
+---
+
+## ✨ Características Principales
+
+| Área | Funcionalidad |
+|------|---------------|
+| Carga | Lectura de `.cpd`, extracción de variables, valores y unidades |
+| Modificación | `Search Variables` para sobrescribir subconjuntos (NaN = no cambiar) |
+| Ejecución | `Play CPD` aplica valores y calcula resultados finales |
+| Optimización | `Optimizer` genera fitness único + valores objetivos (auto-detección) |
+| Filtrado | `Search Results` devuelve solo variables de interés |
+| Guardado | `Save CPD` ( `.cpd` / `.txt` ) |
+| Exportación | HTML / PDF / Word reutilizando el mismo `UpdatedSheet` |
+| Rendimiento | Cache interno para iteraciones GA más rápidas |
+| Unidad / Consistencia | Delegado al core de Calcpad |
+
+---
+
+## 🧩 Componentes (v1.2.0)
 
 1. Info  
 2. Load CPD  
@@ -52,104 +77,79 @@ Calcpad sheets (`.cpd`) can be executed directly inside Grasshopper:
 10. Export Word  
 11. Help  
 
-*(Load CPDz component exists in source but is excluded in this build.)*
-
 ---
 
 ## 🛠 Requisitos
 
-- Rhino 8 (Grasshopper)
-- .NET Framework 4.8
-- Calcpad 7+ instalado (recomendado; aporta runtime y validación de hojas)
-- Windows (x64)
+- Rhino 8 + Grasshopper  
+- Calcpad 7+ instalado (recomendado)  
 
 ---
 
 ## 📦 Instalación
 
-1. Descarga el ZIP desde [Releases](../../releases).  
-2. Extrae el ZIP.  
-3. Copia la carpeta `GH_Calcpad` (y su contenido) a tu carpeta de librerías Grasshopper:  
-   `C:\Users\<TU_USUARIO>\AppData\Roaming\Grasshopper\Libraries`
-4. (Solo si no aparece la pestaña) Clic derecho en `GH_Calcpad.gha` → Propiedades → Desbloquear.
-5. Reinicia Rhino → abre Grasshopper → pestaña **Calcpad**.
+1. Descarga el ZIP (ver sección “Descargas”) y desbloquear.  
+2. Extrae y copia la carpeta `GH_Calcpad` a:  
+   `C:\Users\<USUARIO>\AppData\Roaming\Grasshopper\Libraries`
+3. (Solo si no aparece la pestaña) Propiedades → “Desbloquear” sobre `GH_Calcpad.gha`.
+4. Reinicia Rhino y abre Grasshopper.  
+5. Verifica la pestaña **Calcpad**.
 
 ---
 
 ## ⚡ Quick Start
 
-1. Coloca el componente **Load CPD** y conecta la ruta a un archivo `.cpd`.
-2. (Opcional) Usa **Search Variables** para sobrescribir algunos valores.
-3. Conecta a **Play CPD** para ejecutar.
-4. Usa **Search Results** si quieres filtrar resultados por nombre.
-5. Exporta con **Export PDF** / **Export Word** / **Export HTML**.
+1. Coloca **Load CPD** y asigna ruta a un `.cpd`.  
+2. (Opcional) **Search Variables** para modificar algunos parámetros.  
+3. Conecta a **Play CPD** → obtienes ecuaciones, valores y unidades.  
+4. (Opcional) **Search Results** para filtrar específicos.  
+5. Exporta con **Export PDF / Word / HTML**.  
 
 ---
 
-## 🧪 Optimization Workflow
-Load CPD → Optimizer → (Galapagos / Octopus) → Play CPD (implicit) → Best solution → Save / Export
-- Deja vacías las listas de diseño/objetivos para auto‑detección inicial.
-- Usa la salida Fitness como objetivo primario (menor = mejor).
+## 🔄 Workflows
 
----
-
-## 🔧 Best Practices
-
-- Mantén correspondencia 1:1: Variables / Values / Units.
-- Usa **NaN** en la lista “Values” de Play CPD para no modificar una posición.
-- Reutiliza la salida `UpdatedSheet` para todas las exportaciones en cadena.
-- Aplica **Search Results** antes de graficar en Grasshopper para reducir coste.
-- Nombres de variables finales: sin espacios (facilita filtrado).
-
----
-
-## 🗂 Example Workflows
-
-| Workflow | Secuencia |
-|----------|-----------|
+| Tipo | Secuencia |
+|------|----------|
 | Básico | Load CPD → Play → Export |
-| Edición selectiva | Load CPD → Search Variables → Play → Export |
-| Filtrado | Load CPD → Play → Search Results → Export |
+| Modificación selectiva | Load CPD → Search Variables → Play → Export |
+| Filtrado de resultados | Load CPD → Play → Search Results → Export |
 | Optimización | Load CPD → Optimizer → Galapagos → Save / Export |
-| Completo | Load → Search Variables → Play → Search Results → Save → PDF / Word |
+| Completo | Load → Search Variables → Play → Search Results → Save → Export |
 
 ---
 
-## 🧭 Roadmap (Resumen)
-
-| Estado | Elemento |
-|--------|----------|
-| En curso | Mejora de compatibilidad `.cpdz` |
-| Planificado | Métricas avanzadas de convergencia en Optimizer |
-| Planificado | Carpeta oficial de ejemplos (parametric + optimization) |
-| Evaluación | Exportación incremental / diff |
+## 🧪 Optimización
+Load CPD → Optimizer → Galapagos (Genome = Variable Values) → Mejor fitness → Save / Export
+- Deja listas de diseño/objetivos vacías para auto-detección inicial.
+- Fitness menor = solución mejor.
+- Usa `Convergence Info` y `Status` para detener o ajustar.
 
 ---
 
-## 📝 License / Atribución
+## 🔧 Buenas Prácticas
 
-Calcpad Core (Calcpad.Core.dll) se distribuye bajo su propia licencia (MIT según archivo LICENSE del proveedor).  
-Este plugin integra la API expuesta; revisa la licencia del repositorio para condiciones específicas del wrapper GH_Calcpad.
-
----
-
-## 🆘 Support
-
-- Revisa el componente **Help** dentro de la pestaña
-- Issues / sugerencias: abre un [Issue](../../issues)
+- Mantener 1:1: Variables / Values / Units.  
+- No reordenar listas originales; `Search Variables` aplica cambios preservando orden.  
+- `UpdatedSheet` se reutiliza para todas las exportaciones.  
+- Filtra antes de graficar (menos coste en canvas).  
+- Nombres de variables finales sin espacios para un filtrado fiable.  
+- Verificar siempre salida **Success** en Play / Export / Save.  
 
 ---
 
-## ⚠ Disclaimer
+## 📝 Licencia / Atribución
 
-`.cpdz` compiled packages: soporte parcial / experimental en esta versión. Si necesitas plena compatibilidad, usa `.cpd` por ahora.
-
----
-
-## 🔗 GUID (Assembly)
-
-`1A9A80A9-0512-4001-8A73-1FECB82117B7`
+Calcpad Core se distribuye bajo su propia licencia MIT (ver archivo LICENSE del proveedor).  
+GH_Calcpad: ver licencia del repositorio para términos del wrapper y componentes Grasshopper.
 
 ---
 
-Gracias por usar **GH_Calcpad**. Mejora tus flujos de cálculo e ingeniería dentro de Grasshopper de forma directa y reproducible.
+## 🆘 Soporte
+
+- Componente **Help** dentro de la pestaña Calcpad  
+- Issues / sugerencias: [Abrir Issue](../../issues)  
+
+---
+
+Gracias por usar **GH_Calcpad**.
