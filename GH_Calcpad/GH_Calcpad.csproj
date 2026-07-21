@@ -107,7 +107,7 @@
 
     <ItemGroup>
       <PackFiles Include="$(TargetDir)GH_Calcpad.gha" />
-      <PackFiles Include="$(ProjectDir)Documents\Instructivo_GH-Calcpad.pdf" Condition="Exists('$(ProjectDir)Documents\Instructivo_GH-Calcpad.pdf')" />
+      <PackFiles Include="$(ProjectDir)Documents\Instructivo_GH-Calcpad_V2.pdf" Condition="Exists('$(ProjectDir)Documents\Instructivo_GH-Calcpad_V2.pdf')" />
       <PackFiles Include="$(ProjectDir)..\LICENSE" Condition="Exists('$(ProjectDir)..\LICENSE')" />
       <PackFiles Include="$(ProjectDir)..\THIRD-PARTY-NOTICES.txt" Condition="Exists('$(ProjectDir)..\THIRD-PARTY-NOTICES.txt')" />
       <WorkerPackFiles Include="$(WorkerPublishDir)**\*.*" />
