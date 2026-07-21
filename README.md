@@ -32,8 +32,8 @@
 
 | Recurso | Descripción | Enlace |
 |---------|-------------|--------|
-| Plugin (.zip) | `.gha` + worker autocontenido + manual | [Releases](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/releases/latest) |
-| Manual PDF | Instructivo GH_Calcpad V2.pdf | **[Ver](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/GH_Calcpad/Documents/Instructivo_GH-Calcpad_V2.pdf)** |
+| Plugin (.zip) | `.gha` + worker autocontenido + manual | [Ver](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/releases/latest) / [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/releases/latest/download/GH_Calcpad.zip) |
+| Manual PDF | Instructivo GH_Calcpad V2.pdf | [Ver](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/blob/master/GH_Calcpad/Documents/Instructivo_GH-Calcpad_V2.pdf) / [Descargar](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/raw/master/GH_Calcpad/Documents/Instructivo_GH-Calcpad_V2.pdf) |
 | Food4Rhino | Página oficial | [Abrir](https://www.food4rhino.com/en/app/calcpad) |
 | Examples | 4 hojas `.cpd` + `.gh` de ejemplo | [Ver carpeta](https://github.com/Andrei-Damian-Pacheco/GH_Calcpad/tree/master/GH_Calcpad/Examples) |
 
