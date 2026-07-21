@@ -1,0 +1,18 @@
+'Example 03 - Beam bending check, single key variable and key objective
+'Only the design lever and the final result carry the gh_/ghc_ prefix;
+'everything else stays as a plain supporting variable. Intended for the
+'FULL workflow with explicit Filter Names (one name each side), or with
+'the Filter Names left empty since there is exactly one of each prefix.
+
+q = 40N/mm'uniform load on the beam (=40 kN/m)
+L = 5000mm'span
+b = 150mm'beam width (fixed, not a design variable)
+fy = 235MPa'steel yield strength (S235)
+
+gh_h = 200mm'KEY design variable: beam height, driven from Grasshopper
+
+M = q*L^2/8'maximum bending moment
+W = b*gh_h^2/6'elastic section modulus
+sigma = M/W'bending stress
+
+ghc_util = sigma/fy'KEY objective: utilization ratio - should stay <= 1

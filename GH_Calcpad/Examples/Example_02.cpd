@@ -1,0 +1,13 @@
+'Example 02 - Axial tension rod check
+'No gh_/ghc_ prefix: intended for the BASIC or SELECTIVE workflow
+'(Load CPD -> Play CPD -> Export/Save, or with explicit Filter Names
+'typed by hand in Search Variables / Search Results).
+
+N = 50kN'design axial tensile force
+d = 20mm'rod diameter
+fy = 235MPa'steel yield strength (S235)
+gammaM0 = 1'partial safety factor for resistance
+
+A = pi*(d/2)^2'gross cross-sectional area
+NRd = A*fy/gammaM0'design tensile resistance
+util = N/NRd'utilization ratio - should stay <= 1

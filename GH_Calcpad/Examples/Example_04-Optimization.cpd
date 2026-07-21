@@ -1,0 +1,25 @@
+'Example 04 - Simply supported steel beam, cross-section optimization
+'All design variables and all objectives are gh_/ghc_ prefixed, so both
+'Search Variables and Search Results can auto-detect them with Filter
+'Names left empty. Intended to be wired directly into Galapagos or
+'Wallacei as: genome = gh_b, gh_h / fitness = minimize ghc_area subject
+'to ghc_util_bending <= 1 and ghc_util_defl <= 1.
+
+q = 25N/mm'uniform load on the beam (=25 kN/m)
+L = 6000mm'span
+fy = 235MPa'steel yield strength (S235)
+E = 210000MPa'steel modulus of elasticity
+
+gh_b = 150mm'DESIGN VARIABLE: beam width (genome)
+gh_h = 300mm'DESIGN VARIABLE: beam height (genome)
+
+M = q*L^2/8'maximum bending moment
+W = gh_b*gh_h^2/6'elastic section modulus
+I = gh_b*gh_h^3/12'second moment of area
+sigma = M/W'bending stress
+delta = 5*q*L^4/(384*E*I)'maximum midspan deflection
+delta_allow = L/300'serviceability deflection limit
+
+ghc_area = gh_b*gh_h'OBJECTIVE: cross-sectional area - minimize (proxy for material use)
+ghc_util_bending = sigma/fy'CONSTRAINT: bending utilization - keep <= 1
+ghc_util_defl = delta/delta_allow'CONSTRAINT: deflection utilization - keep <= 1
