@@ -28,8 +28,8 @@ namespace GH_Calcpad.Components
         protected override void RegisterInputParams(GH_InputParamManager p)
         {
             p.AddGenericParameter(
-                "Updated Sheet", "US",
-                "Updated CalcpadSheet (from Play CPD)",
+                "Sheet", "S",
+                "CalcpadSheet to save (from Play CPD or Search Variables)",
                 GH_ParamAccess.item);
 
             p.AddTextParameter(
@@ -67,7 +67,7 @@ namespace GH_Calcpad.Components
                 GH_ParamAccess.item);
 
             p.AddBooleanParameter(
-                "Success", "S",
+                "Success", "OK",
                 "True if file was saved or already up-to-date",
                 GH_ParamAccess.item);
         }
@@ -152,9 +152,10 @@ namespace GH_Calcpad.Components
             }
 
             // 6) If exists and content is equal, don't rewrite
+            bool fileExistedBefore = File.Exists(finalPath);
             try
             {
-                if (File.Exists(finalPath))
+                if (fileExistedBefore)
                 {
                     string existing = File.ReadAllText(finalPath, Encoding.UTF8);
                     if (StringEqualsNormalized(existing, code))
@@ -178,12 +179,9 @@ namespace GH_Calcpad.Components
 
             try
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Saving ({ext}) {code.Length} chars → {baseName}{ext}");
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Target path: {finalPath}");
-
                 File.WriteAllText(tmpPath, code, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-                if (File.Exists(finalPath))
+                if (fileExistedBefore)
                     File.Replace(tmpPath, finalPath, null);
                 else
                     File.Move(tmpPath, finalPath);
@@ -192,7 +190,6 @@ namespace GH_Calcpad.Components
                 {
                     fileSize = new FileInfo(finalPath).Length;
                     success = true;
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"✅ File saved: {fileSize:N0} bytes");
                 }
                 else
                 {
@@ -230,14 +227,9 @@ namespace GH_Calcpad.Components
             DA.SetData(1, success);
 
             if (success)
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                    $"✅ Saved → {Path.GetFileName(finalPath)} | {fileSize / 1024.0:F1} KB | Variables: {sheet.Variables?.Count ?? 0}");
-            }
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Saved -> {Path.GetFileName(finalPath)} ({fileSize / 1024.0:F1} KB)");
             else
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "❌ Save failed");
-            }
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Save failed.");
         }
 
         private static bool StringEqualsNormalized(string a, string b)

@@ -1,0 +1,47 @@
+THIRD-PARTY NOTICES
+===================
+
+GH_Calcpad bundles and redistributes the following third-party components,
+under the terms of their respective licenses reproduced below.
+
+-------------------------------------------------------------------------------
+Calcpad.Core / Calcpad.OpenXml (vendored source, Worker\Calcpad.Core and
+Worker\Calcpad.OpenXml) and the Calcpad worksheet template (Worker\GH_Calcpad.Worker\
+Assets\template.html), used to render HTML/PDF/DOCX exports identically to Calcpad's
+own desktop app and CLI.
+Copyright (c) 2024 Ned Ganchovski
+-------------------------------------------------------------------------------
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+wkhtmltopdf.exe (Worker\GH_Calcpad.Worker\Assets\wkhtmltopdf.exe)
+https://wkhtmltopdf.org/
+-------------------------------------------------------------------------------
+
+Redistributed unmodified, as the same binary bundled with the official Calcpad
+desktop application, and invoked as a separate process (not linked into
+GH_Calcpad or Calcpad.Core) to render PDF exports - exactly how Calcpad's own
+CLI (Calcpad.Cli) uses it.
+
+Licensed under the GNU Lesser General Public License version 3 (LGPLv3).
+Full license text: https://www.gnu.org/licenses/lgpl-3.0.html
+Source code: https://github.com/wkhtmltopdf/wkhtmltopdf

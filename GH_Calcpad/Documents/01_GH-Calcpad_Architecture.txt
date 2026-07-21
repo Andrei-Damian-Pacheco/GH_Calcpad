@@ -1,89 +1,114 @@
-GH_CALCPAD ARCHITECTURE // VERSION 1.2.0
+GH_CALCPAD ARCHITECTURE // VERSION 2.0.0
 
 1. PROJECT OBJECTIVE:
 =====================
-Integration of Calcpad into Grasshopper as a comprehensive calculation engine with optimization capabilities. The plugin provides seamless workflow from file loading to professional report generation.
+Integration of Calcpad into Grasshopper as a calculation engine with parametric/optimization
+workflows. The plugin loads a .cpd file, lets Grasshopper set specific variables by name,
+calculates it, reads back specific results by name, and exports/saves the result - matching
+Calcpad's own real behavior exactly (same parser, same rendering, same PDF/DOCX pipeline),
+not an approximation of it.
 
 2. COMPONENT ARCHITECTURE:
-==========================
-TOTAL: 12 COMPONENTS organized in 6 logical workflow blocks
+===========================
+TOTAL: 10 components organized in 7 logical workflow blocks
 
-📋 Information & Diagnostics
-   └── Info
+Information & Diagnostics
+   - Calcpad Info
+   - Calcpad Help
 
-📁 File Loading  
-   ├── Load CPD
-   └── Load CPDz // pending development
+File Loading
+   - Load CPD
 
-🔧 Variable Modification
-   └── Search Variables
+Variable Modification
+   - Search Variables
 
-⚡ Execution & Optimization
-   ├── Play CPD
-   └── Optimizer
+Execution
+   - Play CPD
 
-🔍 Result Filtering
-   └── Search Results
+Result Filtering
+   - Search Results
 
-💾 Saving & Export
-   ├── Save CPD
-   ├── Export HTML
-   ├── Export PDF
-   └── Export Word
+Saving & Export
+   - Save CPD/TXT
+   - Export HTML
+   - Export PDF
+   - Export Word
 
-❓ Help & Support
-   └── Help
+There is no separate "Optimizer" component. Galapagos/Wallacei/Octopus themselves are the
+optimizer; GH_Calcpad's job is only to turn a genome into a fitness value each iteration,
+via the 'gh_'/'ghc_' variable naming convention (see section 3).
 
-3. CORE WORKFLOWS:
-==================
+3. NAMING CONVENTION (gh_ / ghc_):
+====================================
+Prefixing a variable 'gh_' (design/input) or 'ghc_' (objective/result) in the .cpd source
+lets Search Variables and Search Results auto-detect it by name - leave their 'Filter Names'
+input unconnected and they pick up every matching variable, in file order, with no need to
+type names by hand. Files that don't use the prefix still work exactly as before (explicit
+Filter Names).
 
-BASIC WORKFLOW:
-Load CPD → Play → Export
-Variables → Calculate → Reports
-
-VARIABLE MODIFICATION WORKFLOW:
-Load CPD → Search Variables → Play → Export
-Variables → Custom Values → Calculate → Reports
-
-OPTIMIZATION WORKFLOW:
-Load CPD → Optimizer → Galapagos → Save/Export
-Variables → Auto-detection → Genetic Algorithm → Documentation
-
-ADVANCED WORKFLOW:
-Load CPD → Search Variables → Play → Search Results → Export
-Variables → Custom Values → Calculate → Specific Results → Professional Output
-
-4. TECHNICAL SPECIFICATIONS:
-============================
-
-FRAMEWORK: .NET Framework 4.8
-- Grasshopper/Rhino ecosystem compatibility
-- Windows development environment optimized
-
-DEPENDENCIES:
-- Calcpad.Core.dll: Core calculation engine
-- PyCalcpad.dll: Python integration wrapper
-- Standard Grasshopper/RhinoCommon libraries
-
-5. APPLICATION AREAS:
+4. CORE WORKFLOWS:
 ====================
 
+BASIC:
+Load CPD -> Play CPD -> Export/Save
+
+SELECTIVE (set specific variables by name):
+Load CPD -> Search Variables -> Play CPD -> Export/Save
+
+FULL (also filter which results come back):
+Load CPD -> Search Variables -> Play CPD -> Search Results -> Export/Save
+
+OPTIMIZATION (Galapagos / Wallacei / Octopus):
+Same as Full, with both Search components' Filter Names left empty (auto gh_/ghc_), wired
+directly into the optimizer's genome/fitness. Check Play CPD's Success output to penalize
+iterations that fail to calculate instead of letting a NaN propagate silently.
+
+5. TECHNICAL ARCHITECTURE:
+============================
+
+TWO PROCESSES, ONE PLUGIN:
+- GH_Calcpad.dll (net48): the actual Grasshopper plugin. Talks to the worker over a named
+  pipe (NDJSON), never touches Calcpad's engine in-process.
+- GH_Calcpad.Worker.exe (net10, spawned lazily, one per Rhino process): vendors Calcpad's
+  real source (Worker\Calcpad.Core, Worker\Calcpad.OpenXml - not binaries) and does all
+  calculation and HTML/PDF/DOCX rendering. This split exists because Rhino 8 caps its
+  embedded .NET runtime at .NET 8, while current Calcpad.Core targets .NET 10 - running the
+  real engine out-of-process sidesteps that conflict entirely instead of forking Calcpad to
+  an older runtime.
+- GH_Calcpad.Protocol (netstandard2.0): the shared wire-format types both sides use, so
+  client and server can never silently disagree on the JSON shape.
+
+EXPORT PIPELINE (matches Calcpad's own CLI exactly):
+- HTML: wraps the parser's rendered HTML with Calcpad's real worksheet template/CSS
+  (vendored from the installed app, Worker\GH_Calcpad.Worker\Assets\template.html).
+- PDF: same wrapped HTML, rendered via wkhtmltopdf.exe (vendored, same binary and same
+  command-line arguments Calcpad's own CLI uses).
+- Word: native .docx via Calcpad.OpenXml.OpenXmlWriter (vendored source) - real OMath
+  equations, no Word installation or COM automation involved.
+
+FRAMEWORK:
+- Plugin: .NET Framework 4.8 (Grasshopper/RhinoCommon compatibility).
+- Worker: .NET 10, self-contained publish for distribution (end users need no separate
+  runtime install).
+
+There is no dependency on any external Calcpad installation or in-process Calcpad DLLs -
+everything the plugin needs is vendored source, compiled as part of this solution.
+
+6. APPLICATION AREAS:
+=======================
+
 STRUCTURAL ENGINEERING:
-- Beam and column optimization
+- Beam and column sizing/optimization
 - Truss design and analysis
 - Foundation calculations
 
 MECHANICAL DESIGN:
 - Component sizing and optimization
 - Material selection and analysis
-- Performance optimization
 
 ARCHITECTURAL APPLICATIONS:
 - Building envelope optimization
 - Energy efficiency calculations
-- Structural member sizing
 
 =====================
-This implementation provides a comprehensive Calcpad integration for Grasshopper, enabling computational design and engineering optimization workflows.
-
-TOTAL COMPONENTS: 12 organized in 6 logical workflow categories
+TOTAL COMPONENTS: 10, organized in 7 logical workflow categories.

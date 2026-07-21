@@ -1,0 +1,65 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <RootNamespace>Calcpad.Core</RootNamespace>
+    <OutputType>Library</OutputType>
+    <Version>7.6.3</Version>
+    <Authors>Nedelcho Ganchovski</Authors>
+    <Company>Proektsoft EOOD</Company>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig.Signed" Version="1.1.3" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
+    <PackageReference Include="System.IO.Packaging" Version="10.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Calcpad.OpenXml\Calcpad.OpenXml.csproj" />
+  </ItemGroup>
+
+  <!--
+    RealSpecialFunctions.cs / ComplexSpecialFunctions.cs call a static
+    Solver.ModAB(Func<double,double>, ...) overload that does not exist in
+    Solver.cs in this vendored snapshot (confirmed mismatch between two
+    different points in Calcpad's history within the same source drop).
+    Confirmed via reflection against the real, shipped Calcpad.Core.dll
+    (v7.1.9, currently used by GH_Calcpad) that these two classes don't even
+    exist there, and confirmed via grep that no other file in Calcpad.Core
+    calls into them - they are unwired/orphaned in this snapshot. Excluding
+    them costs no real functionality versus what GH_Calcpad already ships today.
+  -->
+  <ItemGroup>
+    <Compile Remove="SpecialFunctions\RealSpecialFunctions.cs" />
+    <Compile Remove="SpecialFunctions\ComplexSpecialFunctions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Messages.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Messages.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+	  <EmbeddedResource Update="Messages.bg.resx">
+      <DependentUpon>Messages.resx</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Messages.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Messages.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+</Project>

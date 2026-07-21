@@ -1,215 +1,132 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
+using GH_Calcpad.Classes;
 using GH_Calcpad.Properties;
 
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// Component for filtering specific results from Calcpad calculations.
-    /// Allows extracting only equations and values of interest from the complete result set.
-    /// Workflow: Load → ModVar → Play → FilterResults → Export/Visualize
+    /// Reads specific computed results from a calculated CalcpadSheet by name (defaults to
+    /// all 'ghc_' objective variables if Filter Names is left empty). Mirrors Search
+    /// Variables' Sheet + optional Filter Names pattern, but for reading results after Play
+    /// CPD instead of setting inputs before it.
     /// </summary>
     public class GH_Calcpad_Search_Results : GH_Component
     {
         public GH_Calcpad_Search_Results()
           : base(
-                "Search Results",       // Descriptive name
-                "SearchRes",            // Short nickname
-                "Filters specific equations and values from calculation results",
-                "Calcpad",              // Category
-                "5. Result Filtering"   // Filter Results
+                "Search Results",
+                "SearchRes",
+                "Reads specific computed results from a calculated CalcpadSheet (defaults to all 'ghc_' objective variables if Filter Names is left empty)",
+                "Calcpad",
+                "5. Result Filtering"
             )
         { }
 
         protected override void RegisterInputParams(GH_InputParamManager p)
         {
-            p.AddTextParameter(
-                "Result Equations", "RE",
-                "Complete list of resulting equations (from Play CPD)",
-                GH_ParamAccess.list);
-            p.AddNumberParameter(
-                "Result Values", "RV",
-                "Complete list of calculated values (from Play CPD)",
-                GH_ParamAccess.list);
+            p.AddGenericParameter("Sheet", "S", "Calculated CalcpadSheet (from Play CPD)", GH_ParamAccess.item);
             p.AddTextParameter(
                 "Filter Names", "FN",
-                "Names of specific variables to extract from results",
+                $"Names of results to read. Leave empty/unconnected to auto-select every variable prefixed '{CalcpadSheet.ObjectiveVariablePrefix}'.",
                 GH_ParamAccess.list);
+            p[1].Optional = true;
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager p)
         {
-            p.AddTextParameter(
-                "Filtered Equations", "FE",
-                "Filtered equations that match Filter Names",
-                GH_ParamAccess.list);
-            p.AddNumberParameter(
-                "Filtered Values", "FV",
-                "Values corresponding to filtered equations",
-                GH_ParamAccess.list);
-            p.AddTextParameter(
-                "Found Names", "FN",
-                "Variable names that were found successfully",
-                GH_ParamAccess.list);
-            p.AddTextParameter(
-                "Not Found", "NF",
-                "Requested variables that were not found in results",
-                GH_ParamAccess.list);
+            p.AddTextParameter("Equations", "EQ", "'Name = expression' for each match (falls back to 'Name = value unit' if no source formula is found, e.g. plain inputs)", GH_ParamAccess.list);
+            p.AddNumberParameter("Values", "V", "Computed values 1:1 with Equations", GH_ParamAccess.list);
+            p.AddTextParameter("Units", "U", "Units 1:1 with Equations", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            var resultEquations = new List<string>();
-            var resultValues = new List<double>();
-            var filterNames = new List<string>();
+            object data = null;
+            var filterNamesIn = new List<string>();
 
-            // Validate required inputs
-            if (!DA.GetDataList(0, resultEquations)) return;
-            if (!DA.GetDataList(1, resultValues)) return;
-            if (!DA.GetDataList(2, filterNames)) return;
+            if (!DA.GetData(0, ref data)) return;
+            DA.GetDataList(1, filterNamesIn);
 
-            // Validate input data consistency
-            if (resultEquations.Count != resultValues.Count)
+            CalcpadSheet sheet = (data as GH_ObjectWrapper)?.Value as CalcpadSheet ?? data as CalcpadSheet;
+            if (sheet == null)
             {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Error,
-                    $"Result Equations ({resultEquations.Count}) and Result Values ({resultValues.Count}) must have the same length.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "The received object is not a valid CalcpadSheet.");
                 return;
             }
 
-            // Validate there is data to process
-            if (resultEquations.Count == 0)
+            List<string> requestedNames;
+            if (filterNamesIn.Count > 0)
             {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Warning,
-                    "No equations received in Result Equations.");
-                DA.SetDataList(0, new List<string>());
-                DA.SetDataList(1, new List<double>());
-                DA.SetDataList(2, new List<string>());
-                DA.SetDataList(3, filterNames);
-                return;
+                requestedNames = filterNamesIn;
             }
-
-            if (filterNames.Count == 0)
+            else
             {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Warning,
-                    "No variables specified for filtering.");
-                DA.SetDataList(0, new List<string>());
-                DA.SetDataList(1, new List<double>());
-                DA.SetDataList(2, new List<string>());
-                DA.SetDataList(3, new List<string>());
-                return;
-            }
-
-            // Create dictionary for fast variable → index mapping
-            var nameToIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < resultEquations.Count; i++)
-            {
-                if (!string.IsNullOrWhiteSpace(resultEquations[i]))
+                sheet.GetResultsByPrefix(CalcpadSheet.ObjectiveVariablePrefix, out requestedNames, out _, out _);
+                if (requestedNames.Count == 0)
                 {
-                    string varName = ExtractVariableName(resultEquations[i]);
-                    if (!string.IsNullOrEmpty(varName))
-                    {
-                        // If duplicates exist, keep the last index
-                        nameToIndex[varName] = i;
-                    }
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning,
+                        $"No results prefixed '{CalcpadSheet.ObjectiveVariablePrefix}' were found, and Filter Names was left empty.");
+                    DA.SetDataList(0, new List<string>());
+                    DA.SetDataList(1, new List<double>());
+                    DA.SetDataList(2, new List<string>());
+                    return;
                 }
             }
 
-            var filteredEquations = new List<string>();
-            var filteredValues = new List<double>();
-            var foundNames = new List<string>();
+            var equationTextByName = BuildEquationTextByName(sheet);
+
+            var equations = new List<string>();
+            var values = new List<double>();
+            var units = new List<string>();
             var notFoundNames = new List<string>();
 
-            // Process each requested variable
-            foreach (var filterName in filterNames)
+            foreach (var requestedName in requestedNames)
             {
-                if (string.IsNullOrWhiteSpace(filterName))
+                var name = requestedName?.Trim();
+                if (string.IsNullOrEmpty(name)) continue;
+
+                if (!sheet.TryGetResult(name, out var canonicalName, out var value, out var unit))
                 {
-                    AddRuntimeMessage(
-                        GH_RuntimeMessageLevel.Warning,
-                        "Empty name found in Filter Names.");
+                    notFoundNames.Add(name);
                     continue;
                 }
 
-                var cleanFilterName = filterName.Trim();
+                string equationText = equationTextByName.TryGetValue(canonicalName, out var eq)
+                    ? eq
+                    : string.IsNullOrEmpty(unit) ? $"{canonicalName} = {value}" : $"{canonicalName} = {value} {unit}";
 
-                if (nameToIndex.TryGetValue(cleanFilterName, out int index))
-                {
-                    // Variable found: add to filtered results
-                    filteredEquations.Add(resultEquations[index]);
-                    filteredValues.Add(resultValues[index]);
-                    foundNames.Add(cleanFilterName);
-
-                    AddRuntimeMessage(
-                        GH_RuntimeMessageLevel.Remark,
-                        $"Variable '{cleanFilterName}' found: {resultValues[index]:F6}");
-                }
-                else
-                {
-                    // Variable not found
-                    notFoundNames.Add(cleanFilterName);
-                    AddRuntimeMessage(
-                        GH_RuntimeMessageLevel.Warning,
-                        $"Variable '{cleanFilterName}' not found in results.");
-                }
+                equations.Add(equationText);
+                values.Add(value);
+                units.Add(unit);
             }
 
-            // Final statistics
-            var totalFound = foundNames.Count;
-            var totalNotFound = notFoundNames.Count;
-            var totalRequested = filterNames.Count;
+            if (notFoundNames.Count > 0)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{notFoundNames.Count} results not found: {string.Join(", ", notFoundNames)}.");
 
-            if (totalFound > 0)
-            {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Remark,
-                    $"✅ Filtered {totalFound} of {totalRequested} requested variables.");
-            }
-
-            if (totalNotFound > 0)
-            {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Warning,
-                    $"⚠️ {totalNotFound} variables not found in results.");
-            }
-
-            // Set outputs
-            DA.SetDataList(0, filteredEquations);   // Filtered equations
-            DA.SetDataList(1, filteredValues);      // Filtered values
-            DA.SetDataList(2, foundNames);          // Found variables
-            DA.SetDataList(3, notFoundNames);       // Not found variables
+            DA.SetDataList(0, equations);
+            DA.SetDataList(1, values);
+            DA.SetDataList(2, units);
         }
 
-        /// <summary>
-        /// Extracts variable name from the left side of an equation
-        /// </summary>
-        /// <param name="equation">Equation in format "variable = expression"</param>
-        /// <returns>Variable name or empty string if cannot be extracted</returns>
-        private string ExtractVariableName(string equation)
+        // "Name = RHS" text for every source-code line that looks like a computed equation,
+        // keyed by exact (canonical) name - lets us show the real formula instead of just the
+        // number when one exists. Last occurrence wins if a name is assigned more than once,
+        // matching the worker's own "final value" semantics.
+        private static Dictionary<string, string> BuildEquationTextByName(CalcpadSheet sheet)
         {
-            if (string.IsNullOrWhiteSpace(equation))
-                return string.Empty;
-
-            // Look for equals sign
-            int equalIndex = equation.IndexOf('=');
-            if (equalIndex <= 0)
-                return string.Empty;
-
-            // Extract left side and clean
-            string leftSide = equation.Substring(0, equalIndex).Trim();
-
-            // Validate it's a valid variable name (only letters, numbers, _, apostrophes)
-            if (System.Text.RegularExpressions.Regex.IsMatch(leftSide, @"^[a-zA-Z_][a-zA-Z0-9_'′,\.]*$"))
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var eq in sheet.GetResultEquations())
             {
-                return leftSide;
+                int i = eq.IndexOf('=');
+                if (i <= 0) continue;
+                var lhs = eq.Substring(0, i).Trim();
+                map[lhs] = eq;
             }
-
-            return string.Empty;
+            return map;
         }
 
         public override Guid ComponentGuid
@@ -218,17 +135,6 @@ namespace GH_Calcpad.Components
         protected override Bitmap Icon
             => Resources.Icon_SearchR;
 
-        /// <summary>
-        /// Additional component information
-        /// </summary>
-        public override string ToString()
-        {
-            return "GH_Calcpad_Filter_Results: Specific results filter";
-        }
-
-        /// <summary>
-        /// Exposure level in interface
-        /// </summary>
         public override GH_Exposure Exposure => GH_Exposure.primary;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Grasshopper.Kernel;
 using GH_Calcpad.Properties;
@@ -8,8 +8,7 @@ namespace GH_Calcpad.Components
     /// <summary>
     /// Help component for GH_Calcpad.
     /// Provides workflows, component overview, best practices and usage examples.
-    /// Updated for version 1.2.0 (current supported input: .cpd; .cpdz experimental / limited).
-    /// All text in English for documentation consistency.
+    /// Updated for version 2.0.0 (worker-based architecture).
     /// </summary>
     public class GH_Calcpad_Help : GH_Component
     {
@@ -32,138 +31,20 @@ namespace GH_Calcpad.Components
             pManager.AddTextParameter("Examples", "E", "Common usage examples", GH_ParamAccess.list);
         }
 
+        // Contenido 100% estático (sin inputs): se calcula una sola vez por sesión de Rhino y se
+        // comparte entre instancias, en vez de reconstruir las 4 listas en cada SolveInstance.
+        private static readonly Lazy<List<string>> _workflow = new Lazy<List<string>>(BuildWorkflow);
+        private static readonly Lazy<List<string>> _componentGuide = new Lazy<List<string>>(BuildComponentGuide);
+        private static readonly Lazy<List<string>> _bestPractices = new Lazy<List<string>>(BuildBestPractices);
+        private static readonly Lazy<List<string>> _examples = new Lazy<List<string>>(BuildExamples);
+
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            // 1) Workflows (only .cpd fully supported in v1.2.0)
-            var workflow = new List<string>
-            {
-                "MAIN WORKFLOWS (v1.2.0 – current support: .cpd):",
-                "",
-                "🔥 OPTIMIZATION WORKFLOW:",
-                "1. Load CPD → Optimizer → Galapagos → Best Solution → Save / Export",
-                "   • Automatic detection of design variables",
-                "   • Single fitness + objective values",
-                "",
-                "📊 BASIC WORKFLOW:",
-                "1. Load CPD → Play → Export",
-                "   • Load → Compute → Report",
-                "",
-                "🔧 VARIABLE MODIFICATION WORKFLOW:",
-                "1. Load CPD → Search Variables → Play → Export",
-                "   • Selectively modify chosen variables, then compute",
-                "",
-                "📈 ADVANCED (RESULT FILTERING):",
-                "1. Load CPD → (Search Variables optional) → Play → Search Results → Export / Save",
-                "   • Modify subset → Compute → Filter key outputs",
-                "",
-                "🧪 PARAMETRIC STUDY:",
-                "1. Load CPD → (Sliders / Series / Range) → Search Variables → Play → Search Results → Analyze",
-                "   • Generate variants → Evaluate → Visualize",
-                "",
-                "ℹ NOTE: Load CPDz component exists; full compiled (.cpdz) workflow support is planned for a future release."
-            };
+            var workflow = _workflow.Value;
+            var componentGuide = _componentGuide.Value;
+            var bestPractices = _bestPractices.Value;
+            var examples = _examples.Value;
 
-            // 2) Component guide
-            var componentGuide = new List<string>
-            {
-                "📋 INFORMATION & DIAGNOSTICS:",
-                "• Info – Plugin + Calcpad.Core versions",
-                "",
-                "📁 FILE LOADING:",
-                "• Load CPD – Load and parse .cpd source sheets",
-                "• Load CPDz – Experimental (works only if textual source is embedded)",
-                "",
-                "🔧 VARIABLE MODIFICATION:",
-                "• Search Variables – Filter + overwrite selected variables keeping full order",
-                "",
-                "⚡ EXECUTION & OPTIMIZATION:",
-                "• Play CPD – Core calculation engine",
-                "• Optimizer – Multi-objective fitness preparation + caching",
-                "",
-                "🔍 RESULT FILTERING:",
-                "• Search Results – Extract specific result variables",
-                "",
-                "💾 SAVING & EXPORT:",
-                "• Save CPD – Save modified sheet (.cpd / .txt)",
-                "• Export HTML – HTML report",
-                "• Export PDF – PDF report",
-                "• Export Word – Editable .docx report",
-                "",
-                "❓ HELP & SUPPORT:",
-                "• Help – This guide"
-            };
-
-            // 3) Best practices
-            var bestPractices = new List<string>
-            {
-                "⚙ VARIABLES:",
-                "• Maintain 1:1 alignment: Variables / Values / Units.",
-                "• Use Search Variables for partial updates (do not reorder original lists).",
-                "• Use NaN in 'Values' (Play) to skip a variable position.",
-                "",
-                "🚀 OPTIMIZER:",
-                "• Leave design variable list empty first run → auto-detection.",
-                "• Review 'Status' + 'Convergence Info' to decide stopping.",
-                "• Reuse the same sheet instance to leverage caching.",
-                "",
-                "📐 PERFORMANCE:",
-                "• Freeze unchanged upstream elements to avoid recompute.",
-                "• Use CaptureExplicit=True when you only need explicit marked variables.",
-                "",
-                "🔍 RESULTS:",
-                "• Search Results to reduce downstream graph clutter.",
-                "• Keep result variable names short and without spaces.",
-                "",
-                "📦 WORKFLOWS:",
-                "• Basic: Load → Play → Export.",
-                "• Advanced: Load → Search Variables → Play → Search Results → Export.",
-                "• Optimization: Load → Optimizer → Galapagos → Save / Export.",
-                "",
-                "🛠 ERROR HANDLING:",
-                "• Always check 'Success' outputs.",
-                "• Yellow = warning (recoverable), Red = fix required.",
-                "• If a value not updated: verify exact variable name.",
-                "",
-                "📄 EXPORT:",
-                "• Reuse 'UpdatedSheet' across HTML/PDF/Word components.",
-                "• Save CPD before exports if internal state changed.",
-                "",
-                "🔮 FUTURE:",
-                "• Enhanced .cpdz support + richer optimizer diagnostics planned."
-            };
-
-            // 4) Examples
-            var examples = new List<string>
-            {
-                "🚀 AUTOMATIC OPTIMIZATION:",
-                "1. Load CPD → Optimizer → Galapagos → Best fitness → Save CPD → Export PDF",
-                "",
-                "🎯 MULTI-OBJECTIVE:",
-                "1. Load CPD → Optimizer (set objectives/modes) → Galapagos / Octopus → Export Word + PDF",
-                "",
-                "🔧 SELECTIVE EDIT:",
-                "1. Load CPD → Search Variables (change few params) → Play → Export HTML",
-                "",
-                "📊 PARAMETRIC STUDY:",
-                "1. Load CPD → Sliders / Series → Search Variables → Play → Search Results → Graph",
-                "",
-                "🗂 COMPLETE PIPELINE:",
-                "1. Load CPD → Search Variables → Play → Search Results → Save CPD → Export PDF / Word",
-                "",
-                "🏗 STRUCTURAL:",
-                "• Minimize weight with displacement + stress constraints",
-                "• Column optimization: cost vs slenderness",
-                "",
-                "🛠 MECHANICAL:",
-                "• Section tuning: stiffness vs mass",
-                "• Thermal/material parameter sweeps",
-                "",
-                "🏛 ENVELOPE:",
-                "• Insulation parameter variations → energy performance comparison",
-                "• Compare alternatives using filtered key outputs"
-            };
-
-            // Set outputs
             DA.SetDataList(0, workflow);
             DA.SetDataList(1, componentGuide);
             DA.SetDataList(2, bestPractices);
@@ -171,8 +52,42 @@ namespace GH_Calcpad.Components
 
             AddRuntimeMessage(
                 GH_RuntimeMessageLevel.Remark,
-                $"GH_Calcpad Help v1.2.0 | Lines: {workflow.Count + componentGuide.Count + bestPractices.Count + examples.Count}");
+                $"GH_Calcpad Help v2.0.0 | Lines: {workflow.Count + componentGuide.Count + bestPractices.Count + examples.Count}");
         }
+
+        private static List<string> BuildWorkflow() => new List<string>
+        {
+            "Basic:        Load CPD -> Play CPD -> Export/Save",
+            "Selective:    Load CPD -> Search Variables -> Play CPD -> Export/Save",
+            "Full:         Load CPD -> Search Variables -> Play CPD -> Search Results -> Export/Save",
+            "Optimization: same as Full, leave both 'Filter Names' empty (auto gh_/ghc_), wire into Galapagos/Wallacei/Octopus"
+        };
+
+        private static List<string> BuildComponentGuide() => new List<string>
+        {
+            "Load CPD: FilePath, Freeze -> Variables, Values, Units, Sheet",
+            "Search Variables: Sheet, Filter Names (empty = auto 'gh_'), New Values -> Sheet, Modified Names/Values, Not Found",
+            "Play CPD: Sheet -> Sheet (calculated), Elapsed, Success",
+            "Search Results: Sheet, Filter Names (empty = auto 'ghc_') -> Equations, Values, Units",
+            "Save CPD/TXT: writes Sheet's code to .cpd/.txt",
+            "Export HTML/PDF/Word: renders Sheet exactly like Calcpad's own app/CLI",
+            "Calcpad Info: plugin + Calcpad.Core versions",
+            "Calcpad Help: this guide"
+        };
+
+        private static List<string> BuildBestPractices() => new List<string>
+        {
+            "Prefix design variables 'gh_' and result variables 'ghc_' to use auto-detect in Search Variables/Search Results.",
+            "Use the real prime character (′), never a straight apostrophe ('): in Calcpad, ' is always a comment.",
+            "Check 'Success' on Play CPD and on Export/Save before trusting downstream results.",
+            "'Not Found' on Search Variables/Search Results flags a typo'd or missing variable name."
+        };
+
+        private static List<string> BuildExamples() => new List<string>
+        {
+            "Optimization: Load CPD -> Search Variables (Filter Names empty, sliders into New Values) -> Play CPD -> Search Results (Filter Names empty) -> Galapagos fitness",
+            "Report only:  Load CPD -> Play CPD -> Export PDF"
+        };
 
         public override Guid ComponentGuid
             => new Guid("A7B2C3D4-E5F6-4A5B-8C9D-1E2F3A4B5C6D");

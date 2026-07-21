@@ -1,191 +1,155 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Types;
+using GH_Calcpad.Classes;
 using GH_Calcpad.Properties;
 
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// Component for filtering and modifying specific variables while maintaining 
-    /// complete structure for perfect integration with GH_Calcpad_Play.
-    /// Workflow: Load → Search (modify specific values) → Play → Export
+    /// Sets specific variables on a CalcpadSheet by name before it reaches Play CPD.
+    /// Workflow: Load CPD -> Search Variables -> Play CPD
     /// </summary>
     public class GH_Calcpad_Search_Variables : GH_Component
     {
         public GH_Calcpad_Search_Variables()
           : base(
-                "Search Variables",     // More descriptive name
-                "SearchVars",                // Clearer nickname
-                "Filters and modifies specific variables maintaining complete structure for Play CPD",
-                "Calcpad",                // Category
-                "3. Variable Modification"   // Modify Variables (Search)
+                "Search Variables",
+                "SearchVars",
+                "Sets specific variables on a CalcpadSheet by name (defaults to all 'gh_' design variables if Filter Names is left empty)",
+                "Calcpad",
+                "3. Variable Modification"
             )
         { }
 
         protected override void RegisterInputParams(GH_InputParamManager p)
         {
-            p.AddTextParameter(
-                "All Names", "AN",
-                "Complete list of variable names (from Load CPD)",
-                GH_ParamAccess.list);
-            p.AddNumberParameter(
-                "All Values", "AV", 
-                "Complete list of variable values (from Load CPD)",
-                GH_ParamAccess.list);
+            p.AddGenericParameter("Sheet", "S", "CalcpadSheet instance (from Load CPD)", GH_ParamAccess.item);
             p.AddTextParameter(
                 "Filter Names", "FN",
-                "Names of specific variables to modify",
+                $"Names of variables to modify. Leave empty/unconnected to auto-select every variable prefixed '{CalcpadSheet.DesignVariablePrefix}'.",
                 GH_ParamAccess.list);
             p.AddNumberParameter(
                 "New Values", "NV",
-                "New values for filtered variables (1:1 order with Filter Names)",
+                "New values, 1:1 order with Filter Names (or with the auto-selected 'gh_' variables, in file order, if Filter Names is empty).",
                 GH_ParamAccess.list);
+            p[1].Optional = true;
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager p)
         {
-            p.AddNumberParameter(
-                "All Values", "AV",
-                "Complete array of values with modifications applied → connect to Play CPD",
-                GH_ParamAccess.list);
-            p.AddTextParameter(
-                "Modified Names", "MN",
-                "Names of variables that were modified successfully",
-                GH_ParamAccess.list);
-            p.AddNumberParameter(
-                "Modified Values", "MV", 
-                "Corresponding modified values (for visualization/debug)",
-                GH_ParamAccess.list);
-            p.AddTextParameter(
-                "Not Found", "NF",
-                "Requested variables that were not found",
-                GH_ParamAccess.list);
+            p.AddGenericParameter("Sheet", "S", "Independent copy of the input Sheet with the requested variables set - connect to Play CPD", GH_ParamAccess.item);
+            p.AddTextParameter("Modified Names", "MN", "Names of variables that were modified successfully", GH_ParamAccess.list);
+            p.AddNumberParameter("Modified Values", "MV", "Corresponding modified values", GH_ParamAccess.list);
+            p.AddTextParameter("Not Found", "NF", "Requested variables that were not found in the Sheet", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            var allNames = new List<string>();
-            var allValues = new List<double>();
-            var filterNames = new List<string>();
+            object data = null;
+            var filterNamesIn = new List<string>();
             var newValues = new List<double>();
 
-            // Validate required inputs
-            if (!DA.GetDataList(0, allNames)) return;
-            if (!DA.GetDataList(1, allValues)) return;
-            if (!DA.GetDataList(2, filterNames)) return;
-            if (!DA.GetDataList(3, newValues)) return;
+            if (!DA.GetData(0, ref data)) return;
+            DA.GetDataList(1, filterNamesIn);
+            if (!DA.GetDataList(2, newValues)) return;
 
-            // Validate input data consistency
-            if (allNames.Count != allValues.Count)
+            CalcpadSheet incomingSheet = (data as GH_ObjectWrapper)?.Value as CalcpadSheet ?? data as CalcpadSheet;
+            if (incomingSheet == null)
             {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Error,
-                    $"All Names ({allNames.Count}) and All Values ({allValues.Count}) must have the same length.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "The received object is not a valid CalcpadSheet.");
                 return;
             }
 
-            if (filterNames.Count != newValues.Count)
+            // Clone before mutating: the same upstream Sheet could be wired into more than one
+            // Search Variables/Play CPD (e.g. comparing scenarios side by side), and CalcpadSheet
+            // is a reference type - Grasshopper fans a wire out by sharing the object, not copying it.
+            CalcpadSheet sheet = incomingSheet.Clone();
+
+            List<string> filterNames = filterNamesIn.Count > 0
+                ? filterNamesIn
+                : GetDesignVariableNames(sheet);
+
+            if (filterNames.Count == 0)
             {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Error,
-                    $"Filter Names ({filterNames.Count}) and New Values ({newValues.Count}) must have the same length.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning,
+                    filterNamesIn.Count > 0
+                        ? "Filter Names is empty."
+                        : $"No variables prefixed '{CalcpadSheet.DesignVariablePrefix}' were found, and Filter Names was left empty.");
+                DA.SetData(0, new GH_ObjectWrapper(sheet));
+                DA.SetDataList(1, new List<string>());
+                DA.SetDataList(2, new List<double>());
+                DA.SetDataList(3, new List<string>());
                 return;
             }
 
-            // Validate there is data to process
-            if (allNames.Count == 0)
+            if (newValues.Count != filterNames.Count)
             {
                 AddRuntimeMessage(
                     GH_RuntimeMessageLevel.Warning,
-                    "No variables received in All Names.");
-                DA.SetDataList(0, new List<double>());
-                DA.SetDataList(1, new List<string>());
-                DA.SetDataList(2, new List<double>());
-                DA.SetDataList(3, filterNames);
-                return;
+                    $"Filter Names ({filterNames.Count}) and New Values ({newValues.Count}) must have the same length.");
             }
 
-            // Create copy of all values (this will be our final result)
-            var resultAllValues = new List<double>(allValues);
-
-            // Create dictionary for fast name → index mapping
-            var nameToIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < allNames.Count; i++)
-            {
-                if (!string.IsNullOrWhiteSpace(allNames[i]))
-                {
-                    var cleanName = allNames[i].Trim();
-                    // If duplicates exist, keep the last index
-                    nameToIndex[cleanName] = i;
-                }
-            }
+            // Case-insensitive lookup for matching the user's typed/auto-detected name against the
+            // canonical, correctly-cased name Load CPD detected - SetVariable rewrites the .cpd code
+            // with an exact-case regex match, so the canonical name (not the user's) must be used.
+            var canonicalByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var v in sheet.Variables)
+                canonicalByName[v] = v;
 
             var modifiedNames = new List<string>();
             var modifiedValues = new List<double>();
             var notFoundNames = new List<string>();
 
-            // Process each variable to modify
-            for (int i = 0; i < filterNames.Count; i++)
+            int n = Math.Min(filterNames.Count, newValues.Count);
+            for (int i = 0; i < n; i++)
             {
-                if (string.IsNullOrWhiteSpace(filterNames[i]))
+                var requestedName = filterNames[i]?.Trim();
+                if (string.IsNullOrEmpty(requestedName))
                 {
-                    AddRuntimeMessage(
-                        GH_RuntimeMessageLevel.Warning,
-                        $"Empty name found in Filter Names at position {i}.");
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Empty name found in Filter Names at position {i}.");
                     continue;
                 }
 
-                var filterName = filterNames[i].Trim();
-                var newValue = newValues[i];
-
-                if (nameToIndex.TryGetValue(filterName, out int index))
+                if (!canonicalByName.TryGetValue(requestedName, out var canonicalName))
                 {
-                    // Variable found: apply change
-                    resultAllValues[index] = newValue;
-                    modifiedNames.Add(filterName);
-                    modifiedValues.Add(newValue);
-
-                    AddRuntimeMessage(
-                        GH_RuntimeMessageLevel.Remark,
-                        $"Variable '{filterName}' changed: {allValues[index]:F3} → {newValue:F3}");
+                    notFoundNames.Add(requestedName);
+                    continue;
                 }
-                else
+
+                double value = newValues[i];
+                try
                 {
-                    // Variable not found
-                    notFoundNames.Add(filterName);
-                    AddRuntimeMessage(
-                        GH_RuntimeMessageLevel.Warning,
-                        $"Variable '{filterName}' not found in All Names.");
+                    sheet.SetVariable(canonicalName, value);
+                    modifiedNames.Add(canonicalName);
+                    modifiedValues.Add(value);
+                }
+                catch (Exception ex)
+                {
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not assign '{canonicalName}': {ex.Message}");
                 }
             }
 
-            // Final statistics
-            var totalModified = modifiedNames.Count;
-            var totalNotFound = notFoundNames.Count;
-            var totalRequested = filterNames.Count;
+            if (modifiedNames.Count > 0)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Modified {modifiedNames.Count} of {filterNames.Count} requested variables.");
+            if (notFoundNames.Count > 0)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{notFoundNames.Count} variables not found: {string.Join(", ", notFoundNames)}.");
 
-            if (totalModified > 0)
-            {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Remark,
-                    $"✅ Modified {totalModified} of {totalRequested} variables. " +
-                    $"Complete array ready for Play CPD ({resultAllValues.Count} values).");
-            }
+            DA.SetData(0, new GH_ObjectWrapper(sheet));
+            DA.SetDataList(1, modifiedNames);
+            DA.SetDataList(2, modifiedValues);
+            DA.SetDataList(3, notFoundNames);
+        }
 
-            if (totalNotFound > 0)
-            {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Warning,
-                    $"⚠️ {totalNotFound} variables not found.");
-            }
-
-            // Set outputs
-            DA.SetDataList(0, resultAllValues);    // → Connect directly to Play CPD
-            DA.SetDataList(1, modifiedNames);      // For debug/visualization
-            DA.SetDataList(2, modifiedValues);     // For debug/visualization  
-            DA.SetDataList(3, notFoundNames);      // For debug/troubleshooting
+        private static List<string> GetDesignVariableNames(CalcpadSheet sheet)
+        {
+            var result = new List<string>();
+            foreach (var name in sheet.Variables)
+                if (name.StartsWith(CalcpadSheet.DesignVariablePrefix, StringComparison.Ordinal))
+                    result.Add(name);
+            return result;
         }
 
         public override Guid ComponentGuid
@@ -194,12 +158,6 @@ namespace GH_Calcpad.Components
         protected override Bitmap Icon
             => Resources.Icon_SearchV;
 
-        /// <summary>
-        /// Additional component information
-        /// </summary>
-        public override string ToString()
-        {
-            return "GH_Calcpad_Search: Specific variable modifier";
-        }
+        public override GH_Exposure Exposure => GH_Exposure.primary;
     }
 }

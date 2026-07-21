@@ -6,10 +6,10 @@
     <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyTitle>GH_Calcpad</AssemblyTitle>
-    <AssemblyDescription>Complete Calcpad integration in Grasshopper with optimization</AssemblyDescription>
-    <AssemblyCompany>Andrei Damian Pacheco</AssemblyCompany>
-    <AssemblyProduct>GH_Calcpad</AssemblyProduct>
-    <Version>1.2.0</Version>
+    <Description>Complete Calcpad integration in Grasshopper with optimization</Description>
+    <Company>Andrei Damian Pacheco</Company>
+    <Product>GH_Calcpad</Product>
+    <Version>2.0.0</Version>
     <BaseOutputPath>C:\Users\USER\AppData\Roaming\Grasshopper\Libraries\Debug\net48</BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
@@ -21,30 +21,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Syntaxis\Calcpad-syntax-for-Notepad++.xml" />
-    <EmbeddedResource Include="Syntaxis\Calcpad-syntax-for-Notepad++dark.xml" />
     <EmbeddedResource Include="Syntaxis\calcpad.xml" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Grasshopper" Version="8.21.25188.17001" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="Calcpad.Core">
-      <HintPath>Libraries\Calcpad.Core.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Calcpad">
-      <HintPath>Libraries\Calcpad.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="PyCalcpad">
-      <HintPath>Libraries\PyCalcpad.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared JSON wire contract with Worker\GH_Calcpad.Worker (netstandard2.0, consumable from net48). -->
+    <ProjectReference Include="..\Worker\GH_Calcpad.Protocol\GH_Calcpad.Protocol.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -59,25 +51,39 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <ItemGroup>
-    <SlimLibs Include="Libraries\Calcpad.Core.dll" />
-    <SlimLibs Include="Libraries\Calcpad.dll" />
-    <SlimLibs Include="Libraries\PyCalcpad.dll" />
-  </ItemGroup>
+  <PropertyGroup>
+    <WorkerProjectDir>$(MSBuildThisFileDirectory)..\Worker\GH_Calcpad.Worker\</WorkerProjectDir>
+    <WorkerProject>$(WorkerProjectDir)GH_Calcpad.Worker.csproj</WorkerProject>
+  </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Components\GH_Calcpad_Load_cpdz.cs" />
-    <None Include="Components\GH_Calcpad_Load_cpdz.cs" />
-  </ItemGroup>
+  <!--
+    The plugin process (net48) can't run the net10 worker in-process - it talks to
+    it over a named pipe as a separate GH_Calcpad.Worker.exe (see
+    GH_Calcpad\Classes\CalcpadWorkerClient.cs). This target builds the worker
+    (framework-dependent - fine for local dev, this machine already has the .NET 10
+    runtime) and copies its output into "$(TargetDir)Worker\" after every build.
 
-  <Target Name="CheckCalcpadLibs" BeforeTargets="BeforeBuild">
-    <Error Condition="!Exists('Libraries\Calcpad.Core.dll')" Text="Missing Libraries\Calcpad.Core.dll" />
-    <Error Condition="!Exists('Libraries\Calcpad.dll')" Text="Missing Libraries\Calcpad.dll" />
-    <Error Condition="!Exists('Libraries\PyCalcpad.dll')" Text="Missing Libraries\PyCalcpad.dll" />
-  </Target>
+    IMPORTANT: this MUST be its own subfolder, not $(TargetDir) directly, in case
+    anything ever needs to share a name with a file the worker also ships (the
+    project used to also vendor an old in-process Libraries\Calcpad.Core.dll here,
+    which is exactly what caused "Could not load file or assembly
+    'Calcpad.Core, Version=7.6.3.0'..." - that dependency is gone now that Load CPD's
+    debug HTML and the Export components both go through the worker instead, but the
+    isolated subfolder stays as a cheap guard against the same class of bug).
 
-  <Target Name="CopySlimLibs" AfterTargets="Build">
-    <Copy SourceFiles="@(SlimLibs)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    PackageZip below does a proper self-contained publish for actual distribution,
+    also isolated into its own subfolder for the same reason.
+  -->
+  <PropertyGroup>
+    <WorkerOutputSubfolder>Worker\</WorkerOutputSubfolder>
+  </PropertyGroup>
+
+  <Target Name="BuildAndCopyWorker" AfterTargets="Build">
+    <Exec Command="dotnet build &quot;$(WorkerProject)&quot; -c $(Configuration)" />
+    <ItemGroup>
+      <WorkerOutput Include="$(WorkerProjectDir)bin\$(Configuration)\net10.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WorkerOutput)" DestinationFolder="$(TargetDir)$(WorkerOutputSubfolder)%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 
   <PropertyGroup>
@@ -86,19 +92,30 @@
     <DistZip>$(DesktopPath)\GH_Calcpad.zip</DistZip>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <WorkerPublishDir>$(WorkerProjectDir)bin\publish-selfcontained\</WorkerPublishDir>
+  </PropertyGroup>
+
   <Target Name="PackageZip" AfterTargets="Build">
     <RemoveDir Directories="$(DistDir)" Condition="Exists('$(DistDir)')" />
     <MakeDir Directories="$(DistDir)" />
 
+    <!-- Self-contained publish (embeds its own .NET 10 runtime) for real distribution,
+         so end users don't need any runtime installed separately. -->
+    <RemoveDir Directories="$(WorkerPublishDir)" Condition="Exists('$(WorkerPublishDir)')" />
+    <Exec Command="dotnet publish &quot;$(WorkerProject)&quot; -c Release -r win-x64 --self-contained true -o &quot;$(WorkerPublishDir)&quot;" />
+
     <ItemGroup>
       <PackFiles Include="$(TargetDir)GH_Calcpad.gha" />
-      <PackFiles Include="$(TargetDir)Calcpad.Core.dll" Condition="Exists('$(TargetDir)Calcpad.Core.dll')" />
-      <PackFiles Include="$(TargetDir)Calcpad.dll" Condition="Exists('$(TargetDir)Calcpad.dll')" />
-      <PackFiles Include="$(TargetDir)PyCalcpad.dll" Condition="Exists('$(TargetDir)PyCalcpad.dll')" />
       <PackFiles Include="$(ProjectDir)Documents\Instructivo_GH-Calcpad.pdf" Condition="Exists('$(ProjectDir)Documents\Instructivo_GH-Calcpad.pdf')" />
+      <PackFiles Include="$(ProjectDir)..\LICENSE" Condition="Exists('$(ProjectDir)..\LICENSE')" />
+      <PackFiles Include="$(ProjectDir)..\THIRD-PARTY-NOTICES.txt" Condition="Exists('$(ProjectDir)..\THIRD-PARTY-NOTICES.txt')" />
+      <WorkerPackFiles Include="$(WorkerPublishDir)**\*.*" />
     </ItemGroup>
 
     <Copy SourceFiles="@(PackFiles)" DestinationFolder="$(DistDir)" SkipUnchangedFiles="false" />
+    <!-- Own subfolder - same reason as BuildAndCopyWorker above. -->
+    <Copy SourceFiles="@(WorkerPackFiles)" DestinationFolder="$(DistDir)\$(WorkerOutputSubfolder)%(RecursiveDir)" SkipUnchangedFiles="false" />
     <Delete Files="$(DistZip)" Condition="Exists('$(DistZip)')" />
     <Exec Command="powershell -NoLogo -NoProfile -Command &quot;Compress-Archive -Path '$(DistDir)\*' -DestinationPath '$(DistZip)' -Force&quot;" />
     <Message Text="Created ZIP: $(DistZip)" Importance="High" />

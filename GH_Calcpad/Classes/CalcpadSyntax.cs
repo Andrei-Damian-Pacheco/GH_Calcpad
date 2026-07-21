@@ -18,7 +18,6 @@ namespace GH_Calcpad.Classes
         public static CalcpadSyntax Instance { get; } = new CalcpadSyntax();
 
         private readonly HashSet<string> _functions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> _keywords  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Dynamic set of valid characters in "unit"
         private readonly HashSet<char> _unitChars = new HashSet<char>(new[]
@@ -40,9 +39,6 @@ namespace GH_Calcpad.Classes
             '·'  // MIDDLE DOT U+00B7 (kN·m)
         });
 
-        // Operators/traits that classify as equation
-        private static readonly char[] _opChars = new[] { '+', '-', '*', '/', '^', '(', ')', '=' };
-
         // Dynamically compilable regex (rebuilt after loading XML)
         private Regex RxExplicit1;
         private Regex RxExplicit2Inline;
@@ -57,18 +53,14 @@ namespace GH_Calcpad.Classes
             // Quick fallback
             SeedFallback();
 
-            // Try to enrich unitChars from calcpad.xml (AutoComplete/KeyWord format)
-            TryAugmentUnitCharsFromCalcpadXmlNearAssembly();
+            // Enrich unitChars/functions from the embedded calcpad.xml (AutoComplete/KeyWord format)
             TryAugmentUnitCharsFromEmbeddedCalcpadXml();
 
             // Build regex with current unit character set
             RebuildRegexFromUnitChars();
-
-            // Load functions from Notepad++ XML files (if they exist)
-            TryLoadFromNotepadPlusPlusSyntax();
         }
 
-        public void ParseVariables(string content, bool captureExplicit, out List<string> names, out List<double> values, out List<string> units)
+        public void ParseVariables(string content, out List<string> names, out List<double> values, out List<string> units)
         {
             names = new List<string>();
             values = new List<double>();
@@ -112,8 +104,6 @@ namespace GH_Calcpad.Classes
                                 Upsert(map, order, name, dv, unit);
                             continue;
                         }
-
-                        if (captureExplicit) continue;
 
                         // Literals: name = 123 [unit] (multiple can exist per segment)
                         var m3s = RxLiteralAssign.Matches(segment);
@@ -202,11 +192,28 @@ namespace GH_Calcpad.Classes
             return line.Substring(idx + 1).Trim();
         }
 
+        // A leading numeric literal followed only by a compound unit (letters, °/µ/Ω/·,
+        // a single "/" for rate units like kN/m, and "^n" exponents like m^3 or kg/m^3)
+        // is a plain value assignment, not an equation - even though "/" and "^" are also
+        // arithmetic operators. Only flag it as an equation if something is left over that
+        // a unit token can't explain: +, -, *, parentheses, or a second bare number.
+        private static readonly Regex RxLeadingNumber = new Regex(
+            @"^[-+]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?", RegexOptions.Compiled);
+        private static readonly Regex RxUnitExponent = new Regex(
+            @"\^-?\d+", RegexOptions.Compiled);
+
         private bool LooksLikeEquation(string rhs)
         {
             if (string.IsNullOrWhiteSpace(rhs)) return false;
-            if (rhs.TrimStart().StartsWith("?", StringComparison.Ordinal)) return false;
-            if (rhs.IndexOfAny(_opChars) >= 0) return true;
+            rhs = rhs.TrimStart();
+            if (rhs.StartsWith("?", StringComparison.Ordinal)) return false;
+
+            var lead = RxLeadingNumber.Match(rhs);
+            string tail = lead.Success ? rhs.Substring(lead.Length) : rhs;
+            tail = RxUnitExponent.Replace(tail, "");
+
+            if (Regex.IsMatch(tail, @"[+\-*()]")) return true;
+            if (Regex.IsMatch(tail, @"\d")) return true; // leftover digit not part of a unit exponent
 
             foreach (var fn in _functions)
             {
@@ -233,13 +240,6 @@ namespace GH_Calcpad.Classes
                 "sinh","cosh","tanh","pow"
             };
             foreach (var f in minFunctions) _functions.Add(f);
-
-            var minKeywords = new[]
-            {
-                "for","to","step","if","else","endif","endfor","while","endwhile",
-                "table","print","plot","const"
-            };
-            foreach (var k in minKeywords) _keywords.Add(k);
         }
 
         // Build character class for units from _unitChars and recompile regex
@@ -248,8 +248,10 @@ namespace GH_Calcpad.Classes
             var unitClass = BuildUnitCharClass(_unitChars);
             _unitCharClass = unitClass;
 
-            // identifier class for names (same set as name pattern)
-            const string nameClass = "A-Za-z0-9_'′,\\.";
+            // Identifier class for names, matching Calcpad.Core's own Validator.VarChars set:
+            // straight apostrophe ' is NEVER a valid name char in real Calcpad - it is always
+            // a comment/quote delimiter - only the real prime marks are (single/double/triple/quadruple).
+            const string nameClass = "A-Za-z0-9_,\\.′″‴⁗℧∡ϑϕøØ";
 
             // var = ?{value}unit (anchored to segment)
             RxExplicit1 = new Regex(
@@ -282,31 +284,6 @@ namespace GH_Calcpad.Classes
             return sb.ToString();
         }
 
-        // Read calcpad.xml in assembly folder and add unique token characters to _unitChars
-        private void TryAugmentUnitCharsFromCalcpadXmlNearAssembly()
-        {
-            try
-            {
-                var asmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
-                var candidates = new[]
-                {
-                    Path.Combine(asmDir, "calcpad.xml"),
-                    Path.Combine(asmDir, "Syntaxis", "calcpad.xml"),
-                    Path.Combine(asmDir, "Syntax", "calcpad.xml"),
-                    Path.Combine(asmDir, "Documents", "calcpad.xml"),
-                };
-                foreach (var path in candidates)
-                {
-                    if (File.Exists(path))
-                    {
-                        AugmentUnitCharsFromAutoCompleteXml(path);
-                        break;
-                    }
-                }
-            }
-            catch { /* fallback */ }
-        }
-
         // Read embedded calcpad.xml as resource and add token characters to _unitChars
         private void TryAugmentUnitCharsFromEmbeddedCalcpadXml()
         {
@@ -331,17 +308,6 @@ namespace GH_Calcpad.Classes
         }
 
         // Extract <AutoComplete><KeyWord name="..."/> and add non-alphanumeric characters useful for units
-        private void AugmentUnitCharsFromAutoCompleteXml(string xmlPath)
-        {
-            try
-            {
-                var doc = new XmlDocument();
-                doc.Load(xmlPath);
-                AugmentUnitCharsFromAutoCompleteXml(doc);
-            }
-            catch { /* ignore parse errors */ }
-        }
-
         private void AugmentUnitCharsFromAutoCompleteXml(XmlDocument doc)
         {
             try
@@ -373,66 +339,5 @@ namespace GH_Calcpad.Classes
             catch { /* ignore parse errors */ }
         }
 
-        private void TryLoadFromNotepadPlusPlusSyntax()
-        {
-            try
-            {
-                var asmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
-                var candidates = new[]
-                {
-                    Path.Combine(asmDir, "Calcpad-syntax-for-Notepad++.xml"),
-                    Path.Combine(asmDir, "Calcpad-syntax-for-Notepad++dark.xml"),
-                    Path.Combine(asmDir, "Syntax", "Calcpad-syntax-for-Notepad++.xml"),
-                    Path.Combine(asmDir, "Syntax", "Calcpad-syntax-for-Notepad++dark.xml"),
-                    Path.Combine(asmDir, "Syntaxis", "Calcpad-syntax-for-Notepad++.xml"),
-                    Path.Combine(asmDir, "Syntaxis", "Calcpad-syntax-for-Notepad++dark.xml"),
-                    Path.Combine(asmDir, "Documents", "Calcpad-syntax-for-Notepad++.xml"),
-                    Path.Combine(asmDir, "Documents", "Calcpad-syntax-for-Notepad++dark.xml"),
-                };
-                foreach (var path in candidates)
-                {
-                    if (File.Exists(path)) { ExtractNotepadPlusPlusKeywords(path); }
-                }
-            }
-            catch { /* fallback */ }
-        }
-
-        private void ExtractNotepadPlusPlusKeywords(string xmlPath)
-        {
-            try
-            {
-                var doc = new XmlDocument();
-                doc.Load(xmlPath);
-                var nodes = doc.SelectNodes("//Keywords");
-                if (nodes != null)
-                {
-                    foreach (XmlNode n in nodes)
-                    {
-                        var nameAttr = n.Attributes?["name"]?.Value ?? "";
-                        var text = n.InnerText ?? "";
-                        foreach (var tok in SplitTokens(text))
-                        {
-                            if (nameAttr.IndexOf("func", StringComparison.OrdinalIgnoreCase) >= 0)
-                                _functions.Add(tok);
-                            else
-                                _keywords.Add(tok);
-                        }
-                    }
-                }
-            }
-            catch { /* ignore */ }
-        }
-
-        private static IEnumerable<string> SplitTokens(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text)) yield break;
-            foreach (var t in text.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                var tok = t.Trim();
-                if (tok.Length == 0) continue;
-                tok = tok.Trim('\'', '"');
-                yield return tok;
-            }
-        }
     }
 }

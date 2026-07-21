@@ -1,10 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Drawing;
 using Grasshopper.Kernel;
-using Calcpad.Core;
 
 namespace GH_Calcpad.Components
 {
@@ -28,57 +27,51 @@ namespace GH_Calcpad.Components
             p.AddTextParameter("CalcpadInfo", "Calcpad", "Calcpad.Core version and license", GH_ParamAccess.item);
         }
 
+        // Computed once per Rhino session (no inputs, output never changes while the plugin is loaded)
+        // and shared across all instances of this component to avoid repeated reflection/disk I/O on every solve.
+        private static readonly Lazy<string> _pluginInfo = new Lazy<string>(BuildPluginInfo);
+        private static readonly Lazy<string> _calcpadInfo = new Lazy<string>(BuildCalcpadInfo);
+
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            // 1) Plugin info
-            var pluginVersion = Assembly
-                .GetExecutingAssembly()
-                .GetName()
-                .Version
-                .ToString();
-            var pluginInfo = $"GH_Calcpad v{pluginVersion}";
+            DA.SetData(0, _pluginInfo.Value);
+            DA.SetData(1, _calcpadInfo.Value);
+        }
 
-            // 2) Calcpad.Core.dll info: version + license
-            string coreVersion = "Unknown";
-            // Fallback: if we don't find the file, show these two lines
-            string licenseText =
-                "MIT License" + Environment.NewLine +
-                "Copyright (c) 2023 Proektsoft EOOD";
+        private static string BuildPluginInfo()
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            var pluginVersion = asm.GetName().Version.ToString();
+            var author = asm.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company;
+            return string.IsNullOrWhiteSpace(author)
+                ? $"GH_Calcpad v{pluginVersion}"
+                : $"GH_Calcpad v{pluginVersion}{Environment.NewLine}{author}";
+        }
 
+        private static string BuildCalcpadInfo()
+        {
+            // Calcpad.Core is vendored source (Worker\Calcpad.Core), compiled into the
+            // worker process rather than referenced in-process - so its version/authorship
+            // is read straight off the worker's own Calcpad.Core.dll file metadata instead
+            // of an assembly reference.
             try
             {
-                // Get the Calcpad.Core assembly
-                var coreAsm = typeof(Settings).Assembly;
-                coreVersion = coreAsm.GetName().Version.ToString();
-
-                // Try to read doc\LICENSE.TXT next to the DLL
-                var baseDir = Path.GetDirectoryName(coreAsm.Location);
-                var licensePath = Path.Combine(baseDir, "doc", "LICENSE.TXT");
-
-                if (File.Exists(licensePath))
+                var pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+                var corePath = Path.Combine(pluginDir, "Worker", "Calcpad.Core.dll");
+                if (File.Exists(corePath))
                 {
-                    // Read only the first two real lines
-                    var firstTwo = File
-                        .ReadLines(licensePath)
-                        .Take(2);
-                    licenseText = string.Join(Environment.NewLine, firstTwo);
+                    var info = FileVersionInfo.GetVersionInfo(corePath);
+                    var authorLine = string.IsNullOrWhiteSpace(info.LegalCopyright)
+                        ? info.CompanyName
+                        : $"{info.CompanyName} - {info.LegalCopyright}";
+                    return $"Calcpad.Core v{info.FileVersion}{Environment.NewLine}{authorLine}";
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                AddRuntimeMessage(
-                    GH_RuntimeMessageLevel.Warning,
-                    $"Error reading Calcpad.Core info: {ex.Message}"
-                );
+                // Diagnostic-only info; fall through to the "unavailable" message.
             }
-
-            // Combine everything into a single string
-            var calcpadInfo =
-                $"Calcpad.Core v{coreVersion}{Environment.NewLine}{licenseText}";
-
-            // Set outputs
-            DA.SetData(0, pluginInfo);
-            DA.SetData(1, calcpadInfo);
+            return "Calcpad.Core: version unavailable (Worker\\Calcpad.Core.dll not found)";
         }
 
         public override GH_Exposure Exposure => GH_Exposure.primary;

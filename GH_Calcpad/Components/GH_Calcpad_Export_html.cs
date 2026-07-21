@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Drawing;
 using Grasshopper.Kernel;
@@ -9,7 +9,8 @@ using GH_Calcpad.Properties;
 namespace GH_Calcpad.Components
 {
     /// <summary>
-    /// Exports Calcpad report to HTML using the native engine (Parser.Convert).
+    /// Exports Calcpad's own rendered HTML report (same worksheet template Calcpad's
+    /// desktop app/CLI use).
     /// </summary>
     public class GH_Calcpad_Export_html : GH_Component
     {
@@ -17,32 +18,17 @@ namespace GH_Calcpad.Components
           : base(
                 "Export HTML",
                 "ExportHTML",
-                "Exports Calcpad to HTML using Calcpad's native Convert engine",
+                "Exports Calcpad's rendered HTML report",
                 "Calcpad",
                 "6. Saving & Export")
         { }
 
         protected override void RegisterInputParams(GH_InputParamManager p)
         {
-            p.AddGenericParameter(
-                "Updated Sheet", "US",
-                "Calculated CalcpadSheet (from Play CPD)",
-                GH_ParamAccess.item);
-
-            p.AddTextParameter(
-                "File", "N",
-                "Base name (without extension)",
-                GH_ParamAccess.item);
-
-            p.AddTextParameter(
-                "Output Folder", "F",
-                "Destination folder",
-                GH_ParamAccess.item);
-
-            p.AddBooleanParameter(
-                "Execute", "X",
-                "True = export",
-                GH_ParamAccess.item, false);
+            p.AddGenericParameter("Sheet", "S", "CalcpadSheet to export (from Play CPD or Search Variables)", GH_ParamAccess.item);
+            p.AddTextParameter("File", "N", "Base name (without extension)", GH_ParamAccess.item);
+            p.AddTextParameter("Output Folder", "F", "Destination folder", GH_ParamAccess.item);
+            p.AddBooleanParameter("Execute", "X", "True = export", GH_ParamAccess.item, false);
 
             p[1].Optional = true;
             p[2].Optional = true;
@@ -50,15 +36,8 @@ namespace GH_Calcpad.Components
 
         protected override void RegisterOutputParams(GH_OutputParamManager p)
         {
-            p.AddTextParameter(
-                "HTML Path", "H",
-                "Path of the generated .html",
-                GH_ParamAccess.item);
-
-            p.AddBooleanParameter(
-                "Success", "S",
-                "True if .html was generated",
-                GH_ParamAccess.item);
+            p.AddTextParameter("HTML Path", "H", "Path of the generated .html", GH_ParamAccess.item);
+            p.AddBooleanParameter("Success", "OK", "True if .html was generated", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -81,21 +60,6 @@ namespace GH_Calcpad.Components
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(outputFolder))
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'Output Folder'. No export until path is provided.");
-                DA.SetData(0, null);
-                DA.SetData(1, false);
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Connect 'File'. No export until name is provided.");
-                DA.SetData(0, null);
-                DA.SetData(1, false);
-                return;
-            }
-
             var sheet = (data as GH_ObjectWrapper)?.Value as CalcpadSheet ?? data as CalcpadSheet;
             if (sheet == null)
             {
@@ -103,26 +67,15 @@ namespace GH_Calcpad.Components
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(sheet.OriginalCode))
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No code to export. Run 'Play CPD' first.");
-                return;
-            }
+            var (success, finalPath, error) = CalcpadExporter.Export(sheet, outputFolder, fileName, "html");
 
-            var res = CalcpadExporter.ExportHtmlNative(
-                sheet,
-                outputFolder,
-                fileName.Trim(),
-                msg => AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, msg));
+            DA.SetData(0, success ? finalPath : null);
+            DA.SetData(1, success);
 
-            DA.SetData(0, res.success ? res.finalPath : null);
-            DA.SetData(1, res.success);
-
-            if (res.success)
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark,
-                    $"✅ HTML export → {Path.GetFileName(res.finalPath)} | {res.size / 1024.0:F1} KB | {res.method}");
+            if (success)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"HTML export -> {Path.GetFileName(finalPath)}");
             else
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "❌ HTML export failed (Calcpad Convert).");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"HTML export failed: {error}");
         }
 
         public override Guid ComponentGuid => new Guid("0D1D3B68-9D8B-4F6A-A23E-6F7EB07E2E7D");

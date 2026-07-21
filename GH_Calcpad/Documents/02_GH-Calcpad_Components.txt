@@ -1,179 +1,154 @@
-COMPONENTS GH_CALCPAD
-=====================
+COMPONENTS GH_CALCPAD // VERSION 2.0.0
+=======================================
 
-📋 INFORMATION & DIAGNOSTICS
-============================
+INFORMATION & DIAGNOSTICS
+==========================
 
-a. GH_Calcpad_Info.cs
-Plugin information panel. Displays the plugin version and Calcpad.Core version with license information.
+a. GH_Calcpad_Info.cs ("Calcpad Info" / CP_Info)
+Plugin information panel. Reads the worker's vendored Calcpad.Core.dll file metadata
+directly (no in-process reference to Calcpad), so it always reflects whatever version the
+worker actually calculates with.
 INPUTS:
 - (none)
 OUTPUTS:
-- PluginInfo: Item · string — GH_Calcpad plugin version
-- CalcpadInfo: Item · string — Calcpad.Core version and license information
+- PluginInfo: Item - string - GH_Calcpad version + author (Andrei Damian Pacheco)
+- CalcpadInfo: Item - string - Calcpad.Core version + author/copyright
 
-📁 FILE LOADING
-===============
-
-b. GH_Calcpad_Load_cpd.cs
-Reads .cpd (plain-text) calculation files. Extracts variables, values, and units with automatic file monitoring.
+b. GH_Calcpad_Help.cs ("Calcpad Help" / CP_Help)
+Static, always-available quick reference: workflows, one line per component, best
+practices, examples.
 INPUTS:
-- FilePath: Item · string — full path to the .cpd file
-- CaptureExplicit: Item · bool — if true, only captures explicit format variables (default = false)
+- (none)
 OUTPUTS:
-- Variables: List · string — names of all variables found
-- Values: List · double — numeric values, 1:1 with Variables  
-- Units: List · string — units, 1:1 with Variables
-- SheetObj: Item · object — CalcpadSheet instance for other components
+- Workflow: List - string
+- ComponentGuide: List - string
+- BestPractices: List - string
+- Examples: List - string
 
-c. GH_Calcpad_Load_cpdz.cs // Pending development
-Reads .cpdz (compiled/zip) calculation files. Supports Base64 decoding and format detection.
+FILE LOADING
+=============
+
+c. GH_Calcpad_Load_cpd.cs ("Load CPD" / LoadCPD)
+Reads a .cpd/.txt file and extracts variables, values and units. Detects both the explicit
+'var = ?{val}unit' placeholder format and plain literal assignments in a single pass (no
+separate mode toggle - both are always recognized). Watches the file on disk and
+auto-refreshes when it changes.
 INPUTS:
-- FilePath: Item · string — full path to the .cpdz file
+- FilePath: Item - string - full path to the .cpd/.txt file
+- Freeze: Item - bool, optional (default false) - acts as a switch: if True, blocks all
+  output (no data passes downstream) and stops reading/watching the file
 OUTPUTS:
-- Variables: List · string — names of explicit variables found
-- Values: List · double — numeric values, 1:1 with Variables
-- Units: List · string — units, 1:1 with Variables  
-- SheetObj: Item · object — CalcpadSheet instance for other components
-- Status: Item · string — file parsing status (TextOK | Binary | NoSource | HtmlParsed)
+- Variables: List - string - names of variables found, in file order
+- Values: List - double - numeric values, 1:1 with Variables
+- Units: List - string - units, 1:1 with Variables
+- SheetObj (Sheet): Item - object - CalcpadSheet instance
 
-🔧 VARIABLE MODIFICATION
-========================
+VARIABLE MODIFICATION
+=======================
 
-d. GH_Calcpad_Search_Variables.cs
-Filters and modifies specific variables while maintaining complete structure for perfect integration with Play CPD.
+d. GH_Calcpad_Search_Variables.cs ("Search Variables" / SearchVars)
+Sets specific variables on a Sheet by name, before Play CPD. Clones the incoming Sheet
+before writing to it, so wiring the same upstream Sheet into more than one branch never
+lets one branch overwrite another's values.
 INPUTS:
-- All Names: List · string — complete list of variable names (from Load CPD)
-- All Values: List · double — complete list of variable values (from Load CPD)
-- Filter Names: List · string — names of specific variables to modify
-- New Values: List · double — new values for filtered variables (1:1 order with Filter Names)
+- Sheet: Item - object - CalcpadSheet (from Load CPD)
+- Filter Names: List - string, optional - names to modify; leave empty/unconnected to
+  auto-select every variable prefixed 'gh_'
+- New Values: List - double - 1:1 with Filter Names (or with the auto-selected 'gh_'
+  variables, in file order, if Filter Names is empty)
 OUTPUTS:
-- All Values: List · double — complete array of values with modifications applied → connect to Play CPD
-- Modified Names: List · string — names of variables that were modified successfully
-- Modified Values: List · double — corresponding modified values (for visualization/debug)
-- Not Found: List · string — requested variables that were not found
+- Sheet: Item - object - independent copy of the input Sheet with the requested variables
+  set - connect to Play CPD
+- Modified Names: List - string
+- Modified Values: List - double
+- Not Found: List - string - requested names not present in the Sheet
 
-⚡ EXECUTION & OPTIMIZATION
-===========================
+EXECUTION
+==========
 
-e. GH_Calcpad_Play.cs
-Main calculation engine. Executes calculations with optional variable override and performance monitoring.
+e. GH_Calcpad_Play.cs ("Play CPD" / PlayCPD)
+The calculation engine. Takes a fully-prepared Sheet and runs it through Calcpad (the
+worker process). Clones the incoming Sheet before calculating.
 INPUTS:
-- Values: List · double — new values for variables (1:1 order with SheetObj Variables), optional
-- SheetObj: Item · object — CalcpadSheet from Load components
+- Sheet: Item - object - CalcpadSheet to calculate (from Load CPD or Search Variables)
 OUTPUTS:
-- ResultEq: List · string — result equations in 'Name=(...)' format
-- ResultVal: List · double — numeric results, 1:1 with ResultEq
-- Units: List · string — units of final results
-- Elapsed: Item · double — calculation time in milliseconds
-- Success: Item · bool — true if calculation successful
-- UpdatedSheet: Item · object — updated CalcpadSheet for export components
+- Sheet: Item - object - calculated CalcpadSheet - connect to Search Results and/or Export
+- Elapsed: Item - double - calculation time in milliseconds
+- Success: Item - bool - true if calculation succeeded (check this before trusting
+  downstream results, especially inside an optimization loop)
 
-f. GH_Calcpad_Optimizer.cs
-AI-powered optimization component with auto-detection capabilities and intelligent caching.
-INPUTS:
-- Sheet Object: Item · object — CalcpadSheet from Load CPD
-- Design Variables: List · string — variables to optimize (auto-detected if empty), optional
-- Variable Values: List · double — current values from optimizer (Galapagos input)
-- Objective Names: List · string — variables to minimize/maximize (auto-detected if empty), optional
-- Optimization Mode: List · string — minimize/maximize/target per objective, optional
-- Target Values: List · double — target values for 'target' mode, optional
-OUTPUTS:
-- Fitness: Item · double — single fitness value for optimizer (lower = better)
-- Objective Values: List · double — individual values for each objective
-- Status: Item · string — calculation status and convergence information
-- Iteration: Item · double — current iteration number
-- Best Fitness: Item · double — best fitness found so far
-- Suggested Variables: List · string — auto-detected variables for optimization
-- Convergence Info: Item · string — progress analysis and recommendations
-
-🔍 RESULT FILTERING
-===================
-
-g. GH_Calcpad_Search_Results.cs
-Filters specific results from calculation outputs for focused post-calculation analysis.
-INPUTS:
-- Result Equations: List · string — complete list of result equations (from Play CPD)
-- Result Values: List · double — complete list of result values (from Play CPD)
-- Filter Names: List · string — specific variable names to extract from results
-OUTPUTS:
-- Filtered Equations: List · string — equations that match Filter Names
-- Filtered Values: List · double — values corresponding to filtered equations
-- Found Names: List · string — variables that were successfully found
-- Not Found: List · string — requested variables not found in results
-
-💾 SAVING & EXPORT
-==================
-
-h. GH_Calcpad_Save_cpd.cs
-Saves modified CPD/TXT files with controlled execution and flexible naming.
-INPUTS:
-- Updated Sheet: Item · object — CalcpadSheet from Play CPD with modifications
-- File: Item · string — base name (without extension), optional
-- Output Folder: Item · string — destination folder path, optional
-- CPD/TXT: Item · bool — false = .cpd (default), true = .txt, optional
-- Execute: Item · bool — true = save (default = false)
-OUTPUTS:
-- Save Path: Item · string — complete path of the saved file
-- Success: Item · bool — true if file was saved successfully
-
-i. GH_Calcpad_Export_html.cs
-Exports HTML reports using Calcpad's native Convert engine with controlled execution.
-INPUTS:
-- Updated Sheet: Item · object — calculated CalcpadSheet (from Play CPD)
-- File: Item · string — base name (without extension), optional
-- Output Folder: Item · string — destination folder, optional
-- Execute: Item · bool — true = export (default = false)
-OUTPUTS:
-- HTML Path: Item · string — path of the generated .html file
-- Success: Item · bool — true if .html was generated
-
-j. GH_Calcpad_Export_pdf.cs
-Generates professional PDF reports using Calcpad's native export engine with controlled execution.
-INPUTS:
-- Updated Sheet: Item · object — calculated CalcpadSheet (from Play CPD)
-- File: Item · string — base name (without extension), optional
-- Output Folder: Item · string — destination folder, optional
-- Execute: Item · bool — true = export (default = false)
-OUTPUTS:
-- PDF Path: Item · string — path of the generated PDF file
-- Success: Item · bool — true if PDF was generated
-
-k. GH_Calcpad_Export_word.cs
-Exports editable Word documents using multiple conversion methods with controlled execution.
-INPUTS:
-- Updated Sheet: Item · object — calculated CalcpadSheet (from Play CPD)
-- File: Item · string — base name (without extension), optional
-- Output Folder: Item · string — destination folder, optional
-- Execute: Item · bool — true = export (default = false)
-OUTPUTS:
-- Word Path: Item · string — path of the generated .docx file
-- Success: Item · bool — true if .docx was generated
-
-❓ HELP & SUPPORT
+RESULT FILTERING
 =================
 
-l. GH_Calcpad_Help.cs
-Interactive help system providing workflow guidance and best practices for the GH_Calcpad ecosystem.
+f. GH_Calcpad_Search_Results.cs ("Search Results" / SearchRes)
+Reads specific computed results from a calculated Sheet by name, straight from the
+worker's authoritative result set (no source-text scanning for values/units).
 INPUTS:
-- (none)
+- Sheet: Item - object - calculated CalcpadSheet (from Play CPD)
+- Filter Names: List - string, optional - names to read; leave empty/unconnected to
+  auto-select every result prefixed 'ghc_'
 OUTPUTS:
-- Workflow: List · string — step-by-step workflow guide
-- ComponentGuide: List · string — description of each component and purpose
-- BestPractices: List · string — best practices and usage tips
-- Examples: List · string — common usage examples and scenarios
+- Equations: List - string - 'Name = expression' for each match (falls back to
+  'Name = value unit' when no source formula exists, e.g. plain inputs)
+- Values: List - double
+- Units: List - string
+
+SAVING & EXPORT
+================
+
+g. GH_Calcpad_Save_cpd.cs ("Save CPD/TXT" / SaveCPD)
+Writes the Sheet's current code to a .cpd or .txt file. Safe write (temp file + replace),
+skips rewriting if the target file's content is already identical.
+INPUTS:
+- Sheet: Item - object - CalcpadSheet to save (from Play CPD or Search Variables)
+- File: Item - string, optional - base name (without extension)
+- Output Folder: Item - string, optional - destination folder
+- CPD/TXT: Item - bool, optional (default false) - false = .cpd, true = .txt
+- Execute: Item - bool (default false) - true = save
+OUTPUTS:
+- Save Path: Item - string
+- Success: Item - bool
+
+h. GH_Calcpad_Export_html.cs ("Export HTML" / ExportHTML)
+Exports Calcpad's own rendered HTML report - same worksheet template/CSS the real Calcpad
+desktop app and CLI use.
+INPUTS:
+- Sheet: Item - object - CalcpadSheet to export (from Play CPD or Search Variables)
+- File: Item - string, optional
+- Output Folder: Item - string, optional
+- Execute: Item - bool (default false)
+OUTPUTS:
+- HTML Path: Item - string
+- Success: Item - bool
+
+i. GH_Calcpad_Export_pdf.cs ("Export PDF" / ExportPDF)
+Same rendered report exported to PDF via wkhtmltopdf.exe (vendored, the same binary and
+CLI arguments Calcpad's own CLI uses).
+INPUTS: (same as Export HTML)
+OUTPUTS:
+- PDF Path: Item - string
+- Success: Item - bool
+
+j. GH_Calcpad_Export_word.cs ("Export Word" / ExportWord)
+Same rendered report exported to a native .docx via Calcpad.OpenXml.OpenXmlWriter (real
+OMath equations, no Word installation or COM automation).
+INPUTS: (same as Export HTML)
+OUTPUTS:
+- Word Path: Item - string
+- Success: Item - bool
 
 WORKFLOW INTEGRATION
-====================
+======================
 
-BASIC WORKFLOW:
-Load CPD → Play → Export
+BASIC:
+Load CPD -> Play CPD -> Export/Save
 
-ADVANCED WORKFLOW:
-Load CPD → Search Variables → Play → Search Results → Save/Export
+SELECTIVE:
+Load CPD -> Search Variables -> Play CPD -> Export/Save
 
-OPTIMIZATION WORKFLOW:
-Load CPD → Optimizer → Galapagos → Save/Export
+FULL:
+Load CPD -> Search Variables -> Play CPD -> Search Results -> Export/Save
 
-COMPLETE PARAMETRIC WORKFLOW:
-Load CPD → Search Variables → Play → Search Results → Save CPD → Export PDF/Word
+OPTIMIZATION (Galapagos / Wallacei / Octopus):
+Same as Full, with both Search components' Filter Names left empty (auto 'gh_'/'ghc_'),
+wired directly into the optimizer's genome/fitness.

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Diagnostics;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
@@ -8,95 +7,58 @@ using GH_Calcpad.Properties;
 
 namespace GH_Calcpad.Components
 {
+    /// <summary>
+    /// Calculation engine. Takes a fully-prepared Sheet (values already set via Search
+    /// Variables, or plain literals straight from Load CPD) and runs it through Calcpad.
+    /// The returned Sheet feeds both Search Results (reads the computed values) and any
+    /// Export component (reads OriginalCode, untouched by Calculate()).
+    /// </summary>
     public class GH_Calcpad_Play : GH_Component
     {
         public GH_Calcpad_Play()
           : base("Play CPD", "PlayCPD",
-                 "Executes calculation applying new values to SheetObj variables",
+                 "Calculates a CalcpadSheet",
                  "Calcpad", "4. Execution & Optimization")
         { }
 
         protected override void RegisterInputParams(GH_InputParamManager p)
         {
-            p.AddNumberParameter("Values", "V", "New values for variables (1:1 order with SheetObj Variables). Use NaN to skip a position.", GH_ParamAccess.list);
-            p.AddGenericParameter("SheetObj", "S", "CalcpadSheet from Load", GH_ParamAccess.item);
-            p[0].Optional = true;
+            p.AddGenericParameter("Sheet", "S", "CalcpadSheet to calculate (from Load CPD or Search Variables)", GH_ParamAccess.item);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager p)
         {
-            p.AddTextParameter("ResultEq", "E", "Result equations in 'Name=(...)' format", GH_ParamAccess.list);
-            p.AddNumberParameter("ResultVal", "R", "Final numeric results", GH_ParamAccess.list);
-            p.AddTextParameter("Units", "U", "Units of final results", GH_ParamAccess.list);
+            p.AddGenericParameter("Sheet", "S", "Calculated CalcpadSheet - connect to Search Results and/or Export", GH_ParamAccess.item);
             p.AddNumberParameter("Elapsed", "T", "Calculation time (ms)", GH_ParamAccess.item);
-            p.AddBooleanParameter("Success", "S", "True if calculation successful", GH_ParamAccess.item);
-            p.AddGenericParameter("UpdatedSheet", "US", "Updated CalcpadSheet for export", GH_ParamAccess.item);
+            p.AddBooleanParameter("Success", "OK", "True if calculation succeeded", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            // 1) Inputs
-            var newValues = new List<double>();
-            DA.GetDataList(0, newValues);
-
             object data = null;
-            if (!DA.GetData(1, ref data))
+            if (!DA.GetData(0, ref data))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No data received in SheetObj.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No data received in Sheet.");
                 return;
             }
 
-            // Unwrap CalcpadSheet
-            CalcpadSheet sheet = (data as GH_ObjectWrapper)?.Value as CalcpadSheet ?? data as CalcpadSheet;
-            if (sheet == null)
+            CalcpadSheet incomingSheet = (data as GH_ObjectWrapper)?.Value as CalcpadSheet ?? data as CalcpadSheet;
+            if (incomingSheet == null)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "The received object is not a valid CalcpadSheet.");
                 return;
             }
 
-            // 2) Apply values (tolerant)
-            try
-            {
-                int varCount = sheet.Variables.Count;
-                if (newValues.Count > 0)
-                {
-                    int min = Math.Min(varCount, newValues.Count);
-                    if (newValues.Count != varCount)
-                    {
-                        if (newValues.Count > varCount)
-                            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Received {newValues.Count} values, but Sheet has {varCount} variables. Extra values will be ignored.");
-                        else
-                            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Received {newValues.Count} values, but Sheet has {varCount} variables. Only first {min} variables will be updated.");
-                    }
+            // Clone before mutating: Calculate() writes into the Sheet's internal result
+            // cache, and the same upstream Sheet could be wired into more than one Play CPD.
+            CalcpadSheet sheet = incomingSheet.Clone();
 
-                    for (int i = 0; i < min; i++)
-                    {
-                        double v = newValues[i];
-                        if (double.IsNaN(v) || double.IsInfinity(v)) continue;
-                        TryAssign(sheet, sheet.Variables[i], v);
-                    }
-                }
-            }
-            catch (Exception exAssign)
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Error applying values: {exAssign.Message}");
-            }
-
-            // 3) Calculate
             var sw = Stopwatch.StartNew();
             bool success = false;
-            var equations = new List<string>();
-            var results = new List<double>();
-            var units = new List<string>();
-
             try
             {
                 sheet.Calculate();
                 success = true;
-
-                equations = sheet.GetResultEquations();
-                results = sheet.GetResultValues();
-                units = sheet.GetResultUnits();
             }
             catch (Exception exCalc)
             {
@@ -104,22 +66,9 @@ namespace GH_Calcpad.Components
             }
             sw.Stop();
 
-            // 4) Outputs
-            DA.SetDataList(0, equations);
-            DA.SetDataList(1, results);
-            DA.SetDataList(2, units);
-            DA.SetData(3, sw.Elapsed.TotalMilliseconds);
-            DA.SetData(4, success);
-            DA.SetData(5, new GH_ObjectWrapper(sheet));
-        }
-
-        private void TryAssign(CalcpadSheet sheet, string name, double value)
-        {
-            try { sheet.SetVariable(name, value); }
-            catch (Exception ex)
-            {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Could not assign '{name}': {ex.Message}");
-            }
+            DA.SetData(0, new GH_ObjectWrapper(sheet));
+            DA.SetData(1, sw.Elapsed.TotalMilliseconds);
+            DA.SetData(2, success);
         }
 
         public override Guid ComponentGuid => new Guid("3B4A6ACA-3C2C-40E4-AB6C-ADACE17F78F5");

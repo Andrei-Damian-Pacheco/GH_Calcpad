@@ -127,17 +127,11 @@
   <data name="Icon_Calcpad" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Icon_Calcpad.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icon_Form" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icon_Form.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="Icon_Help" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Icon_Help.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="Icon_Html" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Icon_Html.jpg;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icon_Next" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icon_Next.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="Icon_Pdf" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Icon_Pdf.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

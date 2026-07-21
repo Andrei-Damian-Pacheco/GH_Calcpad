@@ -93,16 +93,6 @@ namespace GH_Calcpad.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icon_Form {
-            get {
-                object obj = ResourceManager.GetObject("Icon_Form", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap Icon_Help {
             get {
                 object obj = ResourceManager.GetObject("Icon_Help", resourceCulture);
@@ -116,16 +106,6 @@ namespace GH_Calcpad.Properties {
         internal static System.Drawing.Bitmap Icon_Html {
             get {
                 object obj = ResourceManager.GetObject("Icon_Html", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icon_Next {
-            get {
-                object obj = ResourceManager.GetObject("Icon_Next", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

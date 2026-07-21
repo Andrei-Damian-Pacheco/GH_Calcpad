@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GH_Calcpad.Worker</RootNamespace>
+    <AssemblyName>GH_Calcpad.Worker</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Calcpad.Core\Calcpad.Core.csproj" />
+    <ProjectReference Include="..\Calcpad.OpenXml\Calcpad.OpenXml.csproj" />
+    <ProjectReference Include="..\GH_Calcpad.Protocol\GH_Calcpad.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Vendored from the real Calcpad app (see THIRD-PARTY-NOTICES.txt): template.html
+         provides the same CSS Calcpad's own HTML/PDF/DOCX export uses, and wkhtmltopdf.exe
+         is the same tool Calcpad.Cli shells out to for PDF - so exports look identical. -->
+    <Content Include="Assets\template.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\wkhtmltopdf.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
